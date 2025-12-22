@@ -2,7 +2,10 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    image: blog-postgres-bigm:16
     container_name: blog_postgres
     environment:
       POSTGRES_USER: postgres
