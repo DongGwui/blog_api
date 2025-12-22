@@ -12,6 +12,7 @@ import (
 	"github.com/ydonggwui/blog-api/internal/config"
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	adminHandler "github.com/ydonggwui/blog-api/internal/handler/admin"
+	publicHandler "github.com/ydonggwui/blog-api/internal/handler/public"
 	"github.com/ydonggwui/blog-api/internal/middleware"
 	"github.com/ydonggwui/blog-api/internal/service"
 )
@@ -25,10 +26,12 @@ type Router struct {
 	config  *config.Config
 
 	// Handlers
-	authHandler *adminHandler.AuthHandler
+	authHandler       *adminHandler.AuthHandler
+	publicPostHandler *publicHandler.PostHandler
+	adminPostHandler  *adminHandler.PostHandler
 }
 
-func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redis *redis.Client, minio *minio.Client) *Router {
+func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *redis.Client, minioClient *minio.Client) *Router {
 	gin.SetMode(cfg.Server.GinMode)
 
 	engine := gin.New()
@@ -38,18 +41,24 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redis *redis.Cli
 
 	// Initialize services
 	authService := service.NewAuthService(queries, &cfg.JWT)
+	postService := service.NewPostService(queries, db)
+	viewService := service.NewViewService(redisClient, postService)
 
 	// Initialize handlers
 	authHandler := adminHandler.NewAuthHandler(authService)
+	publicPostHandler := publicHandler.NewPostHandler(postService, viewService)
+	adminPostHandler := adminHandler.NewPostHandler(postService)
 
 	r := &Router{
-		engine:      engine,
-		db:          db,
-		queries:     queries,
-		redis:       redis,
-		minio:       minio,
-		config:      cfg,
-		authHandler: authHandler,
+		engine:            engine,
+		db:                db,
+		queries:           queries,
+		redis:             redisClient,
+		minio:             minioClient,
+		config:            cfg,
+		authHandler:       authHandler,
+		publicPostHandler: publicPostHandler,
+		adminPostHandler:  adminPostHandler,
 	}
 
 	r.setupRoutes()
@@ -67,10 +76,10 @@ func (r *Router) setupRoutes() {
 		public := api.Group("/public")
 		{
 			// Posts
-			public.GET("/posts", notImplemented)
-			public.GET("/posts/:slug", notImplemented)
-			public.GET("/posts/search", notImplemented)
-			public.POST("/posts/:slug/view", notImplemented)
+			public.GET("/posts", r.publicPostHandler.ListPosts)
+			public.GET("/posts/search", r.publicPostHandler.SearchPosts)
+			public.GET("/posts/:slug", r.publicPostHandler.GetPost)
+			public.POST("/posts/:slug/view", r.publicPostHandler.RecordView)
 
 			// Categories
 			public.GET("/categories", notImplemented)
@@ -98,12 +107,12 @@ func (r *Router) setupRoutes() {
 			admin.GET("/auth/me", r.authHandler.Me)
 
 			// Posts
-			admin.GET("/posts", notImplemented)
-			admin.GET("/posts/:id", notImplemented)
-			admin.POST("/posts", notImplemented)
-			admin.PUT("/posts/:id", notImplemented)
-			admin.DELETE("/posts/:id", notImplemented)
-			admin.PATCH("/posts/:id/publish", notImplemented)
+			admin.GET("/posts", r.adminPostHandler.ListPosts)
+			admin.GET("/posts/:id", r.adminPostHandler.GetPost)
+			admin.POST("/posts", r.adminPostHandler.CreatePost)
+			admin.PUT("/posts/:id", r.adminPostHandler.UpdatePost)
+			admin.DELETE("/posts/:id", r.adminPostHandler.DeletePost)
+			admin.PATCH("/posts/:id/publish", r.adminPostHandler.PublishPost)
 
 			// Categories
 			admin.GET("/categories", notImplemented)
@@ -179,11 +188,6 @@ func (r *Router) healthCheck(c *gin.Context) {
 
 func (r *Router) Run() error {
 	return r.engine.Run(":" + r.config.Server.Port)
-}
-
-// GetAuthService returns the auth service for seeding
-func (r *Router) GetAuthService() *service.AuthService {
-	return service.NewAuthService(r.queries, &r.config.JWT)
 }
 
 func notImplemented(c *gin.Context) {
