@@ -10,18 +10,25 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
 	"github.com/ydonggwui/blog-api/internal/config"
+	"github.com/ydonggwui/blog-api/internal/database/sqlc"
+	adminHandler "github.com/ydonggwui/blog-api/internal/handler/admin"
 	"github.com/ydonggwui/blog-api/internal/middleware"
+	"github.com/ydonggwui/blog-api/internal/service"
 )
 
 type Router struct {
-	engine *gin.Engine
-	db     *sql.DB
-	redis  *redis.Client
-	minio  *minio.Client
-	config *config.Config
+	engine  *gin.Engine
+	db      *sql.DB
+	queries *sqlc.Queries
+	redis   *redis.Client
+	minio   *minio.Client
+	config  *config.Config
+
+	// Handlers
+	authHandler *adminHandler.AuthHandler
 }
 
-func New(cfg *config.Config, db *sql.DB, redis *redis.Client, minio *minio.Client) *Router {
+func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redis *redis.Client, minio *minio.Client) *Router {
 	gin.SetMode(cfg.Server.GinMode)
 
 	engine := gin.New()
@@ -29,12 +36,20 @@ func New(cfg *config.Config, db *sql.DB, redis *redis.Client, minio *minio.Clien
 	engine.Use(middleware.Logger())
 	engine.Use(middleware.CORS())
 
+	// Initialize services
+	authService := service.NewAuthService(queries, &cfg.JWT)
+
+	// Initialize handlers
+	authHandler := adminHandler.NewAuthHandler(authService)
+
 	r := &Router{
-		engine: engine,
-		db:     db,
-		redis:  redis,
-		minio:  minio,
-		config: cfg,
+		engine:      engine,
+		db:          db,
+		queries:     queries,
+		redis:       redis,
+		minio:       minio,
+		config:      cfg,
+		authHandler: authHandler,
 	}
 
 	r.setupRoutes()
@@ -68,15 +83,19 @@ func (r *Router) setupRoutes() {
 			public.GET("/projects/:slug", notImplemented)
 		}
 
+		// Admin auth routes (no auth required for login)
+		adminAuth := api.Group("/admin/auth")
+		{
+			adminAuth.POST("/login", r.authHandler.Login)
+			adminAuth.POST("/logout", r.authHandler.Logout)
+		}
+
 		// Admin routes (auth required)
 		admin := api.Group("/admin")
 		admin.Use(middleware.Auth(r.config.JWT.Secret))
 		{
-			// Auth (login doesn't need auth middleware)
-			// We'll handle login separately
-			api.POST("/admin/auth/login", notImplemented)
-
-			admin.GET("/auth/me", notImplemented)
+			// Auth
+			admin.GET("/auth/me", r.authHandler.Me)
 
 			// Posts
 			admin.GET("/posts", notImplemented)
@@ -160,6 +179,11 @@ func (r *Router) healthCheck(c *gin.Context) {
 
 func (r *Router) Run() error {
 	return r.engine.Run(":" + r.config.Server.Port)
+}
+
+// GetAuthService returns the auth service for seeding
+func (r *Router) GetAuthService() *service.AuthService {
+	return service.NewAuthService(r.queries, &r.config.JWT)
 }
 
 func notImplemented(c *gin.Context) {
