@@ -26,13 +26,15 @@ type Router struct {
 	config  *config.Config
 
 	// Handlers
-	authHandler           *adminHandler.AuthHandler
-	publicPostHandler     *publicHandler.PostHandler
-	publicCategoryHandler *publicHandler.CategoryHandler
-	publicTagHandler      *publicHandler.TagHandler
-	adminPostHandler      *adminHandler.PostHandler
-	adminCategoryHandler  *adminHandler.CategoryHandler
-	adminTagHandler       *adminHandler.TagHandler
+	authHandler            *adminHandler.AuthHandler
+	publicPostHandler      *publicHandler.PostHandler
+	publicCategoryHandler  *publicHandler.CategoryHandler
+	publicTagHandler       *publicHandler.TagHandler
+	publicProjectHandler   *publicHandler.ProjectHandler
+	adminPostHandler       *adminHandler.PostHandler
+	adminCategoryHandler   *adminHandler.CategoryHandler
+	adminTagHandler        *adminHandler.TagHandler
+	adminProjectHandler    *adminHandler.ProjectHandler
 }
 
 func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *redis.Client, minioClient *minio.Client) *Router {
@@ -49,30 +51,35 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	viewService := service.NewViewService(redisClient, postService)
 	categoryService := service.NewCategoryService(queries)
 	tagService := service.NewTagService(queries)
+	projectService := service.NewProjectService(queries)
 
 	// Initialize handlers
 	authHandler := adminHandler.NewAuthHandler(authService)
 	publicPostHandler := publicHandler.NewPostHandler(postService, viewService)
 	publicCategoryHandler := publicHandler.NewCategoryHandler(categoryService, postService)
 	publicTagHandler := publicHandler.NewTagHandler(tagService, postService)
+	publicProjectHandler := publicHandler.NewProjectHandler(projectService)
 	adminPostHandler := adminHandler.NewPostHandler(postService)
 	adminCategoryHandler := adminHandler.NewCategoryHandler(categoryService)
 	adminTagHandler := adminHandler.NewTagHandler(tagService)
+	adminProjectHandler := adminHandler.NewProjectHandler(projectService)
 
 	r := &Router{
-		engine:                engine,
-		db:                    db,
-		queries:               queries,
-		redis:                 redisClient,
-		minio:                 minioClient,
-		config:                cfg,
-		authHandler:           authHandler,
-		publicPostHandler:     publicPostHandler,
+		engine:               engine,
+		db:                   db,
+		queries:              queries,
+		redis:                redisClient,
+		minio:                minioClient,
+		config:               cfg,
+		authHandler:          authHandler,
+		publicPostHandler:    publicPostHandler,
 		publicCategoryHandler: publicCategoryHandler,
-		publicTagHandler:      publicTagHandler,
-		adminPostHandler:      adminPostHandler,
-		adminCategoryHandler:  adminCategoryHandler,
-		adminTagHandler:       adminTagHandler,
+		publicTagHandler:     publicTagHandler,
+		publicProjectHandler: publicProjectHandler,
+		adminPostHandler:     adminPostHandler,
+		adminCategoryHandler: adminCategoryHandler,
+		adminTagHandler:      adminTagHandler,
+		adminProjectHandler:  adminProjectHandler,
 	}
 
 	r.setupRoutes()
@@ -104,8 +111,8 @@ func (r *Router) setupRoutes() {
 			public.GET("/tags/:slug/posts", r.publicTagHandler.GetTagPosts)
 
 			// Projects
-			public.GET("/projects", notImplemented)
-			public.GET("/projects/:slug", notImplemented)
+			public.GET("/projects", r.publicProjectHandler.ListProjects)
+			public.GET("/projects/:slug", r.publicProjectHandler.GetProject)
 		}
 
 		// Admin auth routes (no auth required for login)
@@ -143,11 +150,12 @@ func (r *Router) setupRoutes() {
 			admin.DELETE("/tags/:id", r.adminTagHandler.DeleteTag)
 
 			// Projects
-			admin.GET("/projects", notImplemented)
-			admin.POST("/projects", notImplemented)
-			admin.PUT("/projects/:id", notImplemented)
-			admin.DELETE("/projects/:id", notImplemented)
-			admin.PATCH("/projects/reorder", notImplemented)
+			admin.GET("/projects", r.adminProjectHandler.ListProjects)
+			admin.GET("/projects/:id", r.adminProjectHandler.GetProject)
+			admin.POST("/projects", r.adminProjectHandler.CreateProject)
+			admin.PUT("/projects/:id", r.adminProjectHandler.UpdateProject)
+			admin.DELETE("/projects/:id", r.adminProjectHandler.DeleteProject)
+			admin.PATCH("/projects/reorder", r.adminProjectHandler.ReorderProjects)
 
 			// Media
 			admin.GET("/media", notImplemented)
