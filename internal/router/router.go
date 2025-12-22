@@ -9,12 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/ydonggwui/blog-api/internal/config"
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	adminHandler "github.com/ydonggwui/blog-api/internal/handler/admin"
 	publicHandler "github.com/ydonggwui/blog-api/internal/handler/public"
 	"github.com/ydonggwui/blog-api/internal/middleware"
 	"github.com/ydonggwui/blog-api/internal/service"
+
+	_ "github.com/ydonggwui/blog-api/docs/swagger"
 )
 
 type Router struct {
@@ -96,6 +100,9 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 }
 
 func (r *Router) setupRoutes() {
+	// Swagger documentation
+	r.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	api := r.engine.Group("/api")
 	{
 		// Health check

@@ -12,6 +12,25 @@ import (
 	"github.com/ydonggwui/blog-api/internal/service"
 )
 
+// @title Blog API
+// @version 1.0
+// @description 개인 블로그 백엔드 API
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email eastdong1106@gmail.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Bearer 토큰을 입력하세요 (예: Bearer eyJhbGc...)
+
 func main() {
 	// Load configuration
 	cfg := config.Load()

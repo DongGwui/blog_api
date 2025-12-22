@@ -52,7 +52,7 @@ func (h *MediaHandler) ListMedia(c *gin.Context) {
 // @Security BearerAuth
 // @Accept multipart/form-data
 // @Produce json
-// @Param file formance file true "Image file to upload"
+// @Param file formData file true "Image file to upload"
 // @Success 201 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 413 {object} handler.ErrorResponse
