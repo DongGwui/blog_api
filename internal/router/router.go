@@ -35,6 +35,7 @@ type Router struct {
 	adminCategoryHandler   *adminHandler.CategoryHandler
 	adminTagHandler        *adminHandler.TagHandler
 	adminProjectHandler    *adminHandler.ProjectHandler
+	adminMediaHandler      *adminHandler.MediaHandler
 }
 
 func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *redis.Client, minioClient *minio.Client) *Router {
@@ -52,6 +53,7 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	categoryService := service.NewCategoryService(queries)
 	tagService := service.NewTagService(queries)
 	projectService := service.NewProjectService(queries)
+	mediaService := service.NewMediaService(queries, minioClient, &cfg.MinIO)
 
 	// Initialize handlers
 	authHandler := adminHandler.NewAuthHandler(authService)
@@ -63,6 +65,7 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	adminCategoryHandler := adminHandler.NewCategoryHandler(categoryService)
 	adminTagHandler := adminHandler.NewTagHandler(tagService)
 	adminProjectHandler := adminHandler.NewProjectHandler(projectService)
+	adminMediaHandler := adminHandler.NewMediaHandler(mediaService)
 
 	r := &Router{
 		engine:               engine,
@@ -80,6 +83,7 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 		adminCategoryHandler: adminCategoryHandler,
 		adminTagHandler:      adminTagHandler,
 		adminProjectHandler:  adminProjectHandler,
+		adminMediaHandler:    adminMediaHandler,
 	}
 
 	r.setupRoutes()
@@ -158,9 +162,9 @@ func (r *Router) setupRoutes() {
 			admin.PATCH("/projects/reorder", r.adminProjectHandler.ReorderProjects)
 
 			// Media
-			admin.GET("/media", notImplemented)
-			admin.POST("/media/upload", notImplemented)
-			admin.DELETE("/media/:id", notImplemented)
+			admin.GET("/media", r.adminMediaHandler.ListMedia)
+			admin.POST("/media/upload", r.adminMediaHandler.UploadMedia)
+			admin.DELETE("/media/:id", r.adminMediaHandler.DeleteMedia)
 
 			// Dashboard
 			admin.GET("/dashboard/stats", notImplemented)

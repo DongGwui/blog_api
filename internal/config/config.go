@@ -43,6 +43,7 @@ type MinIOConfig struct {
 	SecretKey string
 	Bucket    string
 	UseSSL    bool
+	PublicURL string
 }
 
 type JWTConfig struct {
@@ -83,6 +84,7 @@ func Load() *Config {
 			SecretKey: getEnv("MINIO_SECRET_KEY", ""),
 			Bucket:    getEnv("MINIO_BUCKET", "blog-images"),
 			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
+			PublicURL: getEnv("MINIO_PUBLIC_URL", "http://localhost:9000"),
 		},
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", ""),

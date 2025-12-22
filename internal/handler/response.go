@@ -90,3 +90,9 @@ func ValidationError(c *gin.Context, message string) {
 		Error: ErrorDetail{Code: "VALIDATION_ERROR", Message: message},
 	})
 }
+
+func Error(c *gin.Context, status int, code string, message string) {
+	c.JSON(status, ErrorResponse{
+		Error: ErrorDetail{Code: code, Message: message},
+	})
+}
