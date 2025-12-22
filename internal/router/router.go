@@ -36,6 +36,7 @@ type Router struct {
 	adminTagHandler        *adminHandler.TagHandler
 	adminProjectHandler    *adminHandler.ProjectHandler
 	adminMediaHandler      *adminHandler.MediaHandler
+	adminDashboardHandler  *adminHandler.DashboardHandler
 }
 
 func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *redis.Client, minioClient *minio.Client) *Router {
@@ -54,6 +55,7 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	tagService := service.NewTagService(queries)
 	projectService := service.NewProjectService(queries)
 	mediaService := service.NewMediaService(queries, minioClient, &cfg.MinIO)
+	dashboardService := service.NewDashboardService(queries)
 
 	// Initialize handlers
 	authHandler := adminHandler.NewAuthHandler(authService)
@@ -66,24 +68,26 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	adminTagHandler := adminHandler.NewTagHandler(tagService)
 	adminProjectHandler := adminHandler.NewProjectHandler(projectService)
 	adminMediaHandler := adminHandler.NewMediaHandler(mediaService)
+	adminDashboardHandler := adminHandler.NewDashboardHandler(dashboardService)
 
 	r := &Router{
-		engine:               engine,
-		db:                   db,
-		queries:              queries,
-		redis:                redisClient,
-		minio:                minioClient,
-		config:               cfg,
-		authHandler:          authHandler,
-		publicPostHandler:    publicPostHandler,
+		engine:                engine,
+		db:                    db,
+		queries:               queries,
+		redis:                 redisClient,
+		minio:                 minioClient,
+		config:                cfg,
+		authHandler:           authHandler,
+		publicPostHandler:     publicPostHandler,
 		publicCategoryHandler: publicCategoryHandler,
-		publicTagHandler:     publicTagHandler,
-		publicProjectHandler: publicProjectHandler,
-		adminPostHandler:     adminPostHandler,
-		adminCategoryHandler: adminCategoryHandler,
-		adminTagHandler:      adminTagHandler,
-		adminProjectHandler:  adminProjectHandler,
-		adminMediaHandler:    adminMediaHandler,
+		publicTagHandler:      publicTagHandler,
+		publicProjectHandler:  publicProjectHandler,
+		adminPostHandler:      adminPostHandler,
+		adminCategoryHandler:  adminCategoryHandler,
+		adminTagHandler:       adminTagHandler,
+		adminProjectHandler:   adminProjectHandler,
+		adminMediaHandler:     adminMediaHandler,
+		adminDashboardHandler: adminDashboardHandler,
 	}
 
 	r.setupRoutes()
@@ -167,7 +171,7 @@ func (r *Router) setupRoutes() {
 			admin.DELETE("/media/:id", r.adminMediaHandler.DeleteMedia)
 
 			// Dashboard
-			admin.GET("/dashboard/stats", notImplemented)
+			admin.GET("/dashboard/stats", r.adminDashboardHandler.GetStats)
 		}
 	}
 }
