@@ -26,9 +26,13 @@ type Router struct {
 	config  *config.Config
 
 	// Handlers
-	authHandler       *adminHandler.AuthHandler
-	publicPostHandler *publicHandler.PostHandler
-	adminPostHandler  *adminHandler.PostHandler
+	authHandler           *adminHandler.AuthHandler
+	publicPostHandler     *publicHandler.PostHandler
+	publicCategoryHandler *publicHandler.CategoryHandler
+	publicTagHandler      *publicHandler.TagHandler
+	adminPostHandler      *adminHandler.PostHandler
+	adminCategoryHandler  *adminHandler.CategoryHandler
+	adminTagHandler       *adminHandler.TagHandler
 }
 
 func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *redis.Client, minioClient *minio.Client) *Router {
@@ -43,22 +47,32 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	authService := service.NewAuthService(queries, &cfg.JWT)
 	postService := service.NewPostService(queries, db)
 	viewService := service.NewViewService(redisClient, postService)
+	categoryService := service.NewCategoryService(queries)
+	tagService := service.NewTagService(queries)
 
 	// Initialize handlers
 	authHandler := adminHandler.NewAuthHandler(authService)
 	publicPostHandler := publicHandler.NewPostHandler(postService, viewService)
+	publicCategoryHandler := publicHandler.NewCategoryHandler(categoryService, postService)
+	publicTagHandler := publicHandler.NewTagHandler(tagService, postService)
 	adminPostHandler := adminHandler.NewPostHandler(postService)
+	adminCategoryHandler := adminHandler.NewCategoryHandler(categoryService)
+	adminTagHandler := adminHandler.NewTagHandler(tagService)
 
 	r := &Router{
-		engine:            engine,
-		db:                db,
-		queries:           queries,
-		redis:             redisClient,
-		minio:             minioClient,
-		config:            cfg,
-		authHandler:       authHandler,
-		publicPostHandler: publicPostHandler,
-		adminPostHandler:  adminPostHandler,
+		engine:                engine,
+		db:                    db,
+		queries:               queries,
+		redis:                 redisClient,
+		minio:                 minioClient,
+		config:                cfg,
+		authHandler:           authHandler,
+		publicPostHandler:     publicPostHandler,
+		publicCategoryHandler: publicCategoryHandler,
+		publicTagHandler:      publicTagHandler,
+		adminPostHandler:      adminPostHandler,
+		adminCategoryHandler:  adminCategoryHandler,
+		adminTagHandler:       adminTagHandler,
 	}
 
 	r.setupRoutes()
@@ -82,10 +96,12 @@ func (r *Router) setupRoutes() {
 			public.POST("/posts/:slug/view", r.publicPostHandler.RecordView)
 
 			// Categories
-			public.GET("/categories", notImplemented)
+			public.GET("/categories", r.publicCategoryHandler.ListCategories)
+			public.GET("/categories/:slug/posts", r.publicCategoryHandler.GetCategoryPosts)
 
 			// Tags
-			public.GET("/tags", notImplemented)
+			public.GET("/tags", r.publicTagHandler.ListTags)
+			public.GET("/tags/:slug/posts", r.publicTagHandler.GetTagPosts)
 
 			// Projects
 			public.GET("/projects", notImplemented)
@@ -115,16 +131,16 @@ func (r *Router) setupRoutes() {
 			admin.PATCH("/posts/:id/publish", r.adminPostHandler.PublishPost)
 
 			// Categories
-			admin.GET("/categories", notImplemented)
-			admin.POST("/categories", notImplemented)
-			admin.PUT("/categories/:id", notImplemented)
-			admin.DELETE("/categories/:id", notImplemented)
+			admin.GET("/categories", r.adminCategoryHandler.ListCategories)
+			admin.POST("/categories", r.adminCategoryHandler.CreateCategory)
+			admin.PUT("/categories/:id", r.adminCategoryHandler.UpdateCategory)
+			admin.DELETE("/categories/:id", r.adminCategoryHandler.DeleteCategory)
 
 			// Tags
-			admin.GET("/tags", notImplemented)
-			admin.POST("/tags", notImplemented)
-			admin.PUT("/tags/:id", notImplemented)
-			admin.DELETE("/tags/:id", notImplemented)
+			admin.GET("/tags", r.adminTagHandler.ListTags)
+			admin.POST("/tags", r.adminTagHandler.CreateTag)
+			admin.PUT("/tags/:id", r.adminTagHandler.UpdateTag)
+			admin.DELETE("/tags/:id", r.adminTagHandler.DeleteTag)
 
 			// Projects
 			admin.GET("/projects", notImplemented)
