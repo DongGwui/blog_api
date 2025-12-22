@@ -1,0 +1,9 @@
+-- Rollback Initial Schema
+
+DROP TABLE IF EXISTS post_tags;
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS tags;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS media;
+DROP TABLE IF EXISTS admins;

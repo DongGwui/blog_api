@@ -11,6 +11,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.97
 	github.com/redis/go-redis/v9 v9.17.2
+	github.com/sqlc-dev/pqtype v0.3.0
 	golang.org/x/text v0.26.0
 )
 
