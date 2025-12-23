@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     build:
@@ -9,7 +7,7 @@ services:
     container_name: blog_postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: "0303"
       POSTGRES_DB: blog
     ports:
       - "5432:5432"
@@ -24,13 +22,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: blog_redis
-    command: redis-server --requirepass redis_password
+    command: redis-server --requirepass 0101
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      test: ["CMD", "redis-cli", "-a", "0101", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,7 +39,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_PASSWORD: minio0202
     ports:
       - "9000:9000"
       - "9001:9001"
