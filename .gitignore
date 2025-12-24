@@ -49,3 +49,6 @@ docs/ENDPOINTS.md
 docs/SETUP.md
 docs/SPEC.md
 docs/TASKS.md
+
+# Claude Code 설정 (로컬 개발용)
+.claude/
