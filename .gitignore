@@ -43,5 +43,9 @@ dist/
 *.log
 logs/
 
-# Docs
-/docs
+# Docs - 설계 문서 제외 (SERVER_GUIDE.md, swagger/ 는 유지)
+docs/DATABASE.md
+docs/ENDPOINTS.md
+docs/SETUP.md
+docs/SPEC.md
+docs/TASKS.md
