@@ -5,16 +5,19 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/model"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/dto"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type TagHandler struct {
-	tagService *service.TagService
+	tagService domainService.TagService
 }
 
-func NewTagHandler(tagService *service.TagService) *TagHandler {
+// NewTagHandlerWithCleanArch creates a new TagHandler with clean architecture service
+func NewTagHandlerWithCleanArch(tagService domainService.TagService) *TagHandler {
 	return &TagHandler{
 		tagService: tagService,
 	}
@@ -35,7 +38,7 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, tags)
+	handler.Success(c, mapper.ToTagResponses(tags))
 }
 
 // CreateTag godoc
@@ -51,15 +54,16 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 // @Failure 409 {object} handler.ErrorResponse
 // @Router /api/admin/tags [post]
 func (h *TagHandler) CreateTag(c *gin.Context) {
-	var req model.CreateTagRequest
+	var req dto.CreateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	tag, err := h.tagService.CreateTag(c.Request.Context(), &req)
+	cmd := mapper.ToCreateTagCommand(&req)
+	tag, err := h.tagService.CreateTag(c.Request.Context(), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrTagSlugExists) {
+		if errors.Is(err, domain.ErrTagSlugExists) {
 			handler.Conflict(c, "Tag slug already exists")
 			return
 		}
@@ -67,7 +71,7 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 		return
 	}
 
-	handler.Created(c, tag)
+	handler.Created(c, mapper.ToTagResponse(tag))
 }
 
 // UpdateTag godoc
@@ -91,19 +95,20 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 		return
 	}
 
-	var req model.UpdateTagRequest
+	var req dto.UpdateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	tag, err := h.tagService.UpdateTag(c.Request.Context(), int32(id), &req)
+	cmd := mapper.ToUpdateTagCommand(&req)
+	tag, err := h.tagService.UpdateTag(c.Request.Context(), int32(id), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrTagNotFound) {
+		if errors.Is(err, domain.ErrTagNotFound) {
 			handler.NotFound(c, "Tag not found")
 			return
 		}
-		if errors.Is(err, service.ErrTagSlugExists) {
+		if errors.Is(err, domain.ErrTagSlugExists) {
 			handler.Conflict(c, "Tag slug already exists")
 			return
 		}
@@ -111,7 +116,7 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, tag)
+	handler.Success(c, mapper.ToTagResponse(tag))
 }
 
 // DeleteTag godoc
@@ -131,7 +136,7 @@ func (h *TagHandler) DeleteTag(c *gin.Context) {
 	}
 
 	if err := h.tagService.DeleteTag(c.Request.Context(), int32(id)); err != nil {
-		if errors.Is(err, service.ErrTagNotFound) {
+		if errors.Is(err, domain.ErrTagNotFound) {
 			handler.NotFound(c, "Tag not found")
 			return
 		}

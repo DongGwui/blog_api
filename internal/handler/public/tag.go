@@ -4,16 +4,19 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type TagHandler struct {
-	tagService  *service.TagService
-	postService *service.PostService
+	tagService  domainService.TagService
+	postService domainService.PostService
 }
 
-func NewTagHandler(tagService *service.TagService, postService *service.PostService) *TagHandler {
+// NewTagHandlerWithCleanArch creates a new TagHandler with clean architecture
+func NewTagHandlerWithCleanArch(tagService domainService.TagService, postService domainService.PostService) *TagHandler {
 	return &TagHandler{
 		tagService:  tagService,
 		postService: postService,
@@ -34,7 +37,7 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, tags)
+	handler.Success(c, mapper.ToTagResponses(tags))
 }
 
 // GetTagPosts godoc
@@ -51,10 +54,10 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 func (h *TagHandler) GetTagPosts(c *gin.Context) {
 	slug := c.Param("slug")
 
-	// Get tag by slug
+	// Get tag by slug (Clean Architecture)
 	tag, err := h.tagService.GetTagBySlug(c.Request.Context(), slug)
 	if err != nil {
-		if errors.Is(err, service.ErrTagNotFound) {
+		if errors.Is(err, domain.ErrTagNotFound) {
 			handler.NotFound(c, "Tag not found")
 			return
 		}
@@ -64,6 +67,7 @@ func (h *TagHandler) GetTagPosts(c *gin.Context) {
 
 	pagination := handler.GetPagination(c)
 
+	// Get posts (Clean Architecture)
 	posts, total, err := h.postService.ListPublishedPostsByTag(
 		c.Request.Context(),
 		tag.ID,
@@ -75,5 +79,5 @@ func (h *TagHandler) GetTagPosts(c *gin.Context) {
 		return
 	}
 
-	handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+	handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 }

@@ -5,15 +5,18 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type MediaHandler struct {
-	mediaService *service.MediaService
+	mediaService domainService.MediaService
 }
 
-func NewMediaHandler(mediaService *service.MediaService) *MediaHandler {
+// NewMediaHandlerWithCleanArch creates a new MediaHandler with clean architecture service
+func NewMediaHandlerWithCleanArch(mediaService domainService.MediaService) *MediaHandler {
 	return &MediaHandler{
 		mediaService: mediaService,
 	}
@@ -32,7 +35,7 @@ func NewMediaHandler(mediaService *service.MediaService) *MediaHandler {
 func (h *MediaHandler) ListMedia(c *gin.Context) {
 	pagination := handler.GetPagination(c)
 
-	result, err := h.mediaService.ListMedia(
+	media, total, err := h.mediaService.ListMedia(
 		c.Request.Context(),
 		int32(pagination.PerPage),
 		int32(pagination.Offset),
@@ -42,7 +45,7 @@ func (h *MediaHandler) ListMedia(c *gin.Context) {
 		return
 	}
 
-	handler.SuccessWithMeta(c, result.Items, pagination.ToMeta(result.Total))
+	handler.SuccessWithMeta(c, mapper.ToMediaResponses(media), pagination.ToMeta(total))
 }
 
 // UploadMedia godoc
@@ -80,19 +83,21 @@ func (h *MediaHandler) UploadMedia(c *gin.Context) {
 	}
 
 	// Upload file
-	result, err := h.mediaService.UploadFile(
+	result, err := h.mediaService.UploadMedia(
 		c.Request.Context(),
-		file,
-		fileHeader.Filename,
-		contentType,
-		fileHeader.Size,
+		domainService.UploadMediaCommand{
+			File:         file,
+			OriginalName: fileHeader.Filename,
+			MimeType:     contentType,
+			Size:         fileHeader.Size,
+		},
 	)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidFileType) {
+		if errors.Is(err, domain.ErrInvalidFileType) {
 			handler.BadRequest(c, "Invalid file type. Only images (JPEG, PNG, GIF, WebP, SVG) are allowed")
 			return
 		}
-		if errors.Is(err, service.ErrFileTooLarge) {
+		if errors.Is(err, domain.ErrFileTooLarge) {
 			handler.Error(c, 413, "REQUEST_ENTITY_TOO_LARGE", "File too large. Maximum size is 10MB")
 			return
 		}
@@ -100,7 +105,7 @@ func (h *MediaHandler) UploadMedia(c *gin.Context) {
 		return
 	}
 
-	handler.Created(c, result)
+	handler.Created(c, mapper.ToUploadMediaResponse(result))
 }
 
 // DeleteMedia godoc
@@ -120,7 +125,7 @@ func (h *MediaHandler) DeleteMedia(c *gin.Context) {
 	}
 
 	if err := h.mediaService.DeleteMedia(c.Request.Context(), int32(id)); err != nil {
-		if errors.Is(err, service.ErrMediaNotFound) {
+		if errors.Is(err, domain.ErrMediaNotFound) {
 			handler.NotFound(c, "Media not found")
 			return
 		}

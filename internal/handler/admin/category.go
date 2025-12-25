@@ -5,16 +5,19 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/model"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/dto"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type CategoryHandler struct {
-	categoryService *service.CategoryService
+	categoryService domainService.CategoryService
 }
 
-func NewCategoryHandler(categoryService *service.CategoryService) *CategoryHandler {
+// NewCategoryHandlerWithCleanArch creates a new CategoryHandler with clean architecture service
+func NewCategoryHandlerWithCleanArch(categoryService domainService.CategoryService) *CategoryHandler {
 	return &CategoryHandler{
 		categoryService: categoryService,
 	}
@@ -34,8 +37,7 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 		handler.InternalError(c, "Failed to fetch categories")
 		return
 	}
-
-	handler.Success(c, categories)
+	handler.Success(c, mapper.ToCategoryResponses(categories))
 }
 
 // CreateCategory godoc
@@ -45,21 +47,22 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body model.CreateCategoryRequest true "Category data"
+// @Param request body dto.CreateCategoryRequest true "Category data"
 // @Success 201 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 409 {object} handler.ErrorResponse
 // @Router /api/admin/categories [post]
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
-	var req model.CreateCategoryRequest
+	var req dto.CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	category, err := h.categoryService.CreateCategory(c.Request.Context(), &req)
+	cmd := mapper.ToCreateCategoryCommand(&req)
+	category, err := h.categoryService.CreateCategory(c.Request.Context(), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrCategorySlugExists) {
+		if errors.Is(err, domain.ErrCategorySlugExists) {
 			handler.Conflict(c, "Category slug already exists")
 			return
 		}
@@ -67,7 +70,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 
-	handler.Created(c, category)
+	handler.Created(c, mapper.ToCategoryResponse(category))
 }
 
 // UpdateCategory godoc
@@ -78,7 +81,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Category ID"
-// @Param request body model.UpdateCategoryRequest true "Category data"
+// @Param request body dto.UpdateCategoryRequest true "Category data"
 // @Success 200 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
@@ -91,19 +94,20 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	var req model.UpdateCategoryRequest
+	var req dto.UpdateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	category, err := h.categoryService.UpdateCategory(c.Request.Context(), int32(id), &req)
+	cmd := mapper.ToUpdateCategoryCommand(&req)
+	category, err := h.categoryService.UpdateCategory(c.Request.Context(), int32(id), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
+		if errors.Is(err, domain.ErrCategoryNotFound) {
 			handler.NotFound(c, "Category not found")
 			return
 		}
-		if errors.Is(err, service.ErrCategorySlugExists) {
+		if errors.Is(err, domain.ErrCategorySlugExists) {
 			handler.Conflict(c, "Category slug already exists")
 			return
 		}
@@ -111,7 +115,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, category)
+	handler.Success(c, mapper.ToCategoryResponse(category))
 }
 
 // DeleteCategory godoc
@@ -132,11 +136,11 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	}
 
 	if err := h.categoryService.DeleteCategory(c.Request.Context(), int32(id)); err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
+		if errors.Is(err, domain.ErrCategoryNotFound) {
 			handler.NotFound(c, "Category not found")
 			return
 		}
-		if errors.Is(err, service.ErrCategoryHasPosts) {
+		if errors.Is(err, domain.ErrCategoryHasPosts) {
 			handler.BadRequest(c, "Cannot delete category with posts")
 			return
 		}

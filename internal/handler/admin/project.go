@@ -5,16 +5,19 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/model"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/dto"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type ProjectHandler struct {
-	projectService *service.ProjectService
+	projectService domainService.ProjectService
 }
 
-func NewProjectHandler(projectService *service.ProjectService) *ProjectHandler {
+// NewProjectHandlerWithCleanArch creates a new ProjectHandler with clean architecture service
+func NewProjectHandlerWithCleanArch(projectService domainService.ProjectService) *ProjectHandler {
 	return &ProjectHandler{
 		projectService: projectService,
 	}
@@ -35,7 +38,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, projects)
+	handler.Success(c, mapper.ToProjectListResponses(projects))
 }
 
 // GetProject godoc
@@ -55,9 +58,9 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
-	project, err := h.projectService.GetProjectByID(c.Request.Context(), int32(id))
+	project, err := h.projectService.GetProject(c.Request.Context(), int32(id))
 	if err != nil {
-		if errors.Is(err, service.ErrProjectNotFound) {
+		if errors.Is(err, domain.ErrProjectNotFound) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
@@ -65,7 +68,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, project)
+	handler.Success(c, mapper.ToProjectResponse(project))
 }
 
 // CreateProject godoc
@@ -75,21 +78,22 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body model.CreateProjectRequest true "Project data"
+// @Param request body dto.CreateProjectRequest true "Project data"
 // @Success 201 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 409 {object} handler.ErrorResponse
 // @Router /api/admin/projects [post]
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
-	var req model.CreateProjectRequest
+	var req dto.CreateProjectRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	project, err := h.projectService.CreateProject(c.Request.Context(), &req)
+	cmd := mapper.ToCreateProjectCommand(&req)
+	project, err := h.projectService.CreateProject(c.Request.Context(), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrProjectSlugExists) {
+		if errors.Is(err, domain.ErrProjectSlugExists) {
 			handler.Conflict(c, "Project slug already exists")
 			return
 		}
@@ -97,7 +101,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	handler.Created(c, project)
+	handler.Created(c, mapper.ToProjectResponse(project))
 }
 
 // UpdateProject godoc
@@ -108,7 +112,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Project ID"
-// @Param request body model.UpdateProjectRequest true "Project data"
+// @Param request body dto.UpdateProjectRequest true "Project data"
 // @Success 200 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
@@ -121,19 +125,20 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	var req model.UpdateProjectRequest
+	var req dto.UpdateProjectRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	project, err := h.projectService.UpdateProject(c.Request.Context(), int32(id), &req)
+	cmd := mapper.ToUpdateProjectCommand(&req)
+	project, err := h.projectService.UpdateProject(c.Request.Context(), int32(id), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrProjectNotFound) {
+		if errors.Is(err, domain.ErrProjectNotFound) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
-		if errors.Is(err, service.ErrProjectSlugExists) {
+		if errors.Is(err, domain.ErrProjectSlugExists) {
 			handler.Conflict(c, "Project slug already exists")
 			return
 		}
@@ -141,7 +146,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, project)
+	handler.Success(c, mapper.ToProjectResponse(project))
 }
 
 // DeleteProject godoc
@@ -161,7 +166,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 	}
 
 	if err := h.projectService.DeleteProject(c.Request.Context(), int32(id)); err != nil {
-		if errors.Is(err, service.ErrProjectNotFound) {
+		if errors.Is(err, domain.ErrProjectNotFound) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
@@ -179,18 +184,19 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body model.ReorderProjectsRequest true "Reorder data"
+// @Param request body dto.ReorderProjectsRequest true "Reorder data"
 // @Success 200 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Router /api/admin/projects/reorder [patch]
 func (h *ProjectHandler) ReorderProjects(c *gin.Context) {
-	var req model.ReorderProjectsRequest
+	var req dto.ReorderProjectsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	if err := h.projectService.ReorderProjects(c.Request.Context(), req.Orders); err != nil {
+	orders := mapper.ToProjectOrderEntities(req.Orders)
+	if err := h.projectService.ReorderProjects(c.Request.Context(), orders); err != nil {
 		handler.InternalError(c, "Failed to reorder projects")
 		return
 	}

@@ -4,15 +4,18 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type ProjectHandler struct {
-	projectService *service.ProjectService
+	projectService domainService.ProjectService
 }
 
-func NewProjectHandler(projectService *service.ProjectService) *ProjectHandler {
+// NewProjectHandlerWithCleanArch creates a new ProjectHandler with clean architecture service
+func NewProjectHandlerWithCleanArch(projectService domainService.ProjectService) *ProjectHandler {
 	return &ProjectHandler{
 		projectService: projectService,
 	}
@@ -34,7 +37,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 			handler.InternalError(c, "Failed to fetch projects")
 			return
 		}
-		handler.Success(c, projects)
+		handler.Success(c, mapper.ToProjectListResponses(projects))
 		return
 	}
 
@@ -44,7 +47,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, projects)
+	handler.Success(c, mapper.ToProjectListResponses(projects))
 }
 
 // GetProject godoc
@@ -61,7 +64,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 
 	project, err := h.projectService.GetProjectBySlug(c.Request.Context(), slug)
 	if err != nil {
-		if errors.Is(err, service.ErrProjectNotFound) {
+		if errors.Is(err, domain.ErrProjectNotFound) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
@@ -69,5 +72,5 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, project)
+	handler.Success(c, mapper.ToProjectResponse(project))
 }

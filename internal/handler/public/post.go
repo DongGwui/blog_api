@@ -3,18 +3,22 @@ package public
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type PostHandler struct {
-	postService *service.PostService
-	viewService *service.ViewService
+	postService domainService.PostService
+	viewService domainService.ViewService
 }
 
-func NewPostHandler(postService *service.PostService, viewService *service.ViewService) *PostHandler {
+// NewPostHandlerWithCleanArch creates a new PostHandler with clean architecture service
+func NewPostHandlerWithCleanArch(postService domainService.PostService, viewService domainService.ViewService) *PostHandler {
 	return &PostHandler{
 		postService: postService,
 		viewService: viewService,
@@ -36,12 +40,12 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 	pagination := handler.GetPagination(c)
 
 	// Check for category filter
-	if categoryID := c.Query("category"); categoryID != "" {
-		var catID int32
-		if _, err := parseID(categoryID, &catID); err == nil {
+	if categoryIDStr := c.Query("category"); categoryIDStr != "" {
+		categoryID, err := strconv.ParseInt(categoryIDStr, 10, 32)
+		if err == nil {
 			posts, total, err := h.postService.ListPublishedPostsByCategory(
 				c.Request.Context(),
-				catID,
+				int32(categoryID),
 				int32(pagination.PerPage),
 				int32(pagination.Offset),
 			)
@@ -49,18 +53,18 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 				handler.InternalError(c, "Failed to fetch posts")
 				return
 			}
-			handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+			handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 			return
 		}
 	}
 
 	// Check for tag filter
-	if tagID := c.Query("tag"); tagID != "" {
-		var tID int32
-		if _, err := parseID(tagID, &tID); err == nil {
+	if tagIDStr := c.Query("tag"); tagIDStr != "" {
+		tagID, err := strconv.ParseInt(tagIDStr, 10, 32)
+		if err == nil {
 			posts, total, err := h.postService.ListPublishedPostsByTag(
 				c.Request.Context(),
-				tID,
+				int32(tagID),
 				int32(pagination.PerPage),
 				int32(pagination.Offset),
 			)
@@ -68,7 +72,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 				handler.InternalError(c, "Failed to fetch posts")
 				return
 			}
-			handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+			handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 			return
 		}
 	}
@@ -84,7 +88,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 		return
 	}
 
-	handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+	handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 }
 
 // GetPost godoc
@@ -99,9 +103,9 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 func (h *PostHandler) GetPost(c *gin.Context) {
 	slug := c.Param("slug")
 
-	post, err := h.postService.GetPublishedPostBySlug(c.Request.Context(), slug)
+	post, err := h.postService.GetPublishedPost(c.Request.Context(), slug)
 	if err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
+		if errors.Is(err, domain.ErrPostNotFound) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
@@ -109,7 +113,7 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, post)
+	handler.Success(c, mapper.ToPostResponse(post))
 }
 
 // SearchPosts godoc
@@ -143,7 +147,7 @@ func (h *PostHandler) SearchPosts(c *gin.Context) {
 		return
 	}
 
-	handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+	handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 }
 
 // RecordView godoc
@@ -161,7 +165,7 @@ func (h *PostHandler) RecordView(c *gin.Context) {
 	// Get post ID from slug
 	postID, err := h.postService.GetPostIDBySlug(c.Request.Context(), slug)
 	if err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
+		if errors.Is(err, domain.ErrPostNotFound) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
@@ -189,22 +193,4 @@ func (h *PostHandler) RecordView(c *gin.Context) {
 			"recorded": isNew,
 		},
 	})
-}
-
-// Helper function to parse ID from string
-func parseID(s string, id *int32) (int32, error) {
-	var n int
-	_, err := gin.DefaultErrorWriter.Write([]byte{})
-	if err != nil {
-		return 0, err
-	}
-
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, errors.New("invalid id")
-		}
-		n = n*10 + int(c-'0')
-	}
-	*id = int32(n)
-	return int32(n), nil
 }

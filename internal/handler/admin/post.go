@@ -5,16 +5,20 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	"github.com/ydonggwui/blog-api/internal/domain/entity"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/model"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/dto"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type PostHandler struct {
-	postService *service.PostService
+	postService domainService.PostService
 }
 
-func NewPostHandler(postService *service.PostService) *PostHandler {
+// NewPostHandlerWithCleanArch creates a new PostHandler with clean architecture service
+func NewPostHandlerWithCleanArch(postService domainService.PostService) *PostHandler {
 	return &PostHandler{
 		postService: postService,
 	}
@@ -35,14 +39,14 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 	pagination := handler.GetPagination(c)
 	status := c.Query("status")
 
-	var posts []model.PostListResponse
+	var posts []entity.PostWithDetails
 	var total int64
 	var err error
 
 	if status != "" {
 		posts, total, err = h.postService.ListPostsByStatus(
 			c.Request.Context(),
-			status,
+			entity.PostStatus(status),
 			int32(pagination.PerPage),
 			int32(pagination.Offset),
 		)
@@ -59,7 +63,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 		return
 	}
 
-	handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+	handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 }
 
 // GetPost godoc
@@ -79,9 +83,9 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		return
 	}
 
-	post, err := h.postService.GetPostByID(c.Request.Context(), int32(id))
+	post, err := h.postService.GetPost(c.Request.Context(), int32(id))
 	if err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
+		if errors.Is(err, domain.ErrPostNotFound) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
@@ -89,7 +93,7 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, post)
+	handler.Success(c, mapper.ToPostResponse(post))
 }
 
 // CreatePost godoc
@@ -99,21 +103,22 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body model.CreatePostRequest true "Post data"
+// @Param request body dto.CreatePostRequest true "Post data"
 // @Success 201 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 409 {object} handler.ErrorResponse
 // @Router /api/admin/posts [post]
 func (h *PostHandler) CreatePost(c *gin.Context) {
-	var req model.CreatePostRequest
+	var req dto.CreatePostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	post, err := h.postService.CreatePost(c.Request.Context(), &req)
+	cmd := mapper.ToCreatePostCommand(&req)
+	post, err := h.postService.CreatePost(c.Request.Context(), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrSlugExists) {
+		if errors.Is(err, domain.ErrSlugExists) {
 			handler.Conflict(c, "Slug already exists")
 			return
 		}
@@ -121,7 +126,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	handler.Created(c, post)
+	handler.Created(c, mapper.ToPostResponse(post))
 }
 
 // UpdatePost godoc
@@ -132,7 +137,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Post ID"
-// @Param request body model.UpdatePostRequest true "Post data"
+// @Param request body dto.UpdatePostRequest true "Post data"
 // @Success 200 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
@@ -145,19 +150,20 @@ func (h *PostHandler) UpdatePost(c *gin.Context) {
 		return
 	}
 
-	var req model.UpdatePostRequest
+	var req dto.UpdatePostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	post, err := h.postService.UpdatePost(c.Request.Context(), int32(id), &req)
+	cmd := mapper.ToUpdatePostCommand(&req)
+	post, err := h.postService.UpdatePost(c.Request.Context(), int32(id), cmd)
 	if err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
+		if errors.Is(err, domain.ErrPostNotFound) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
-		if errors.Is(err, service.ErrSlugExists) {
+		if errors.Is(err, domain.ErrSlugExists) {
 			handler.Conflict(c, "Slug already exists")
 			return
 		}
@@ -165,7 +171,7 @@ func (h *PostHandler) UpdatePost(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, post)
+	handler.Success(c, mapper.ToPostResponse(post))
 }
 
 // DeletePost godoc
@@ -185,7 +191,7 @@ func (h *PostHandler) DeletePost(c *gin.Context) {
 	}
 
 	if err := h.postService.DeletePost(c.Request.Context(), int32(id)); err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
+		if errors.Is(err, domain.ErrPostNotFound) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
@@ -204,7 +210,7 @@ func (h *PostHandler) DeletePost(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Post ID"
-// @Param request body model.PublishRequest true "Publish status"
+// @Param request body dto.PublishRequest true "Publish status"
 // @Success 200 {object} handler.Response
 // @Failure 404 {object} handler.ErrorResponse
 // @Router /api/admin/posts/{id}/publish [patch]
@@ -215,7 +221,7 @@ func (h *PostHandler) PublishPost(c *gin.Context) {
 		return
 	}
 
-	var req model.PublishRequest
+	var req dto.PublishRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
@@ -223,7 +229,7 @@ func (h *PostHandler) PublishPost(c *gin.Context) {
 
 	post, err := h.postService.PublishPost(c.Request.Context(), int32(id), req.Publish)
 	if err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
+		if errors.Is(err, domain.ErrPostNotFound) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
@@ -231,5 +237,5 @@ func (h *PostHandler) PublishPost(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, post)
+	handler.Success(c, mapper.ToPostResponse(post))
 }

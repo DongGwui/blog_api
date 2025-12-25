@@ -9,7 +9,10 @@ import (
 	"github.com/ydonggwui/blog-api/internal/database"
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/router"
-	"github.com/ydonggwui/blog-api/internal/service"
+
+	// Clean Architecture imports
+	appService "github.com/ydonggwui/blog-api/internal/application/service"
+	postgresRepo "github.com/ydonggwui/blog-api/internal/infrastructure/persistence/postgres"
 )
 
 // @title Blog API
@@ -85,7 +88,10 @@ func seedAdmin(queries *sqlc.Queries, cfg *config.Config) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	authService := service.NewAuthService(queries, &cfg.JWT)
+	// Use clean architecture components
+	adminRepo := postgresRepo.NewAdminRepository(queries)
+	authService := appService.NewAuthService(adminRepo, &cfg.JWT)
+
 	if err := authService.EnsureAdminExists(ctx, cfg.Admin.Username, cfg.Admin.Password); err != nil {
 		return err
 	}

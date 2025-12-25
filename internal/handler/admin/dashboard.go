@@ -2,15 +2,17 @@ package admin
 
 import (
 	"github.com/gin-gonic/gin"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type DashboardHandler struct {
-	dashboardService *service.DashboardService
+	dashboardService domainService.DashboardService
 }
 
-func NewDashboardHandler(dashboardService *service.DashboardService) *DashboardHandler {
+// NewDashboardHandlerWithCleanArch creates a new DashboardHandler with clean architecture service
+func NewDashboardHandlerWithCleanArch(dashboardService domainService.DashboardService) *DashboardHandler {
 	return &DashboardHandler{
 		dashboardService: dashboardService,
 	}
@@ -31,5 +33,5 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, stats)
+	handler.Success(c, mapper.ToDashboardStatsResponse(stats))
 }

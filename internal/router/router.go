@@ -16,7 +16,12 @@ import (
 	adminHandler "github.com/ydonggwui/blog-api/internal/handler/admin"
 	publicHandler "github.com/ydonggwui/blog-api/internal/handler/public"
 	"github.com/ydonggwui/blog-api/internal/middleware"
-	"github.com/ydonggwui/blog-api/internal/service"
+
+	// Clean Architecture imports
+	appService "github.com/ydonggwui/blog-api/internal/application/service"
+	postgresRepo "github.com/ydonggwui/blog-api/internal/infrastructure/persistence/postgres"
+	redisRepo "github.com/ydonggwui/blog-api/internal/infrastructure/persistence/redis"
+	minioStorage "github.com/ydonggwui/blog-api/internal/infrastructure/storage/minio"
 
 	_ "github.com/ydonggwui/blog-api/docs/swagger"
 )
@@ -51,28 +56,59 @@ func New(cfg *config.Config, db *sql.DB, queries *sqlc.Queries, redisClient *red
 	engine.Use(middleware.Logger())
 	engine.Use(middleware.CORS())
 
-	// Initialize services
-	authService := service.NewAuthService(queries, &cfg.JWT)
-	postService := service.NewPostService(queries, db)
-	viewService := service.NewViewService(redisClient, postService)
-	categoryService := service.NewCategoryService(queries)
-	tagService := service.NewTagService(queries)
-	projectService := service.NewProjectService(queries)
-	mediaService := service.NewMediaService(queries, minioClient, &cfg.MinIO)
-	dashboardService := service.NewDashboardService(queries)
+	// ============================================
+	// Clean Architecture Layer (All domains)
+	// ============================================
 
-	// Initialize handlers
-	authHandler := adminHandler.NewAuthHandler(authService)
-	publicPostHandler := publicHandler.NewPostHandler(postService, viewService)
-	publicCategoryHandler := publicHandler.NewCategoryHandler(categoryService, postService)
-	publicTagHandler := publicHandler.NewTagHandler(tagService, postService)
-	publicProjectHandler := publicHandler.NewProjectHandler(projectService)
-	adminPostHandler := adminHandler.NewPostHandler(postService)
-	adminCategoryHandler := adminHandler.NewCategoryHandler(categoryService)
-	adminTagHandler := adminHandler.NewTagHandler(tagService)
-	adminProjectHandler := adminHandler.NewProjectHandler(projectService)
-	adminMediaHandler := adminHandler.NewMediaHandler(mediaService)
-	adminDashboardHandler := adminHandler.NewDashboardHandler(dashboardService)
+	// Infrastructure Layer - Repositories
+	categoryRepo := postgresRepo.NewCategoryRepository(queries)
+	tagRepo := postgresRepo.NewTagRepository(queries)
+	postRepo := postgresRepo.NewPostRepository(queries)
+	projectRepo := postgresRepo.NewProjectRepository(queries)
+	mediaRepo := postgresRepo.NewMediaRepository(queries)
+	storageRepo := minioStorage.NewStorageRepository(minioClient, &cfg.MinIO)
+	adminRepo := postgresRepo.NewAdminRepository(queries)
+	dashboardRepo := postgresRepo.NewDashboardRepository(queries)
+	viewRepo := redisRepo.NewViewRepository(redisClient)
+
+	// Application Layer - Services (Clean Architecture)
+	categoryServiceNew := appService.NewCategoryService(categoryRepo)
+	tagServiceNew := appService.NewTagService(tagRepo)
+	postServiceNew := appService.NewPostService(postRepo)
+	projectServiceNew := appService.NewProjectService(projectRepo)
+	mediaServiceNew := appService.NewMediaService(mediaRepo, storageRepo)
+	authServiceNew := appService.NewAuthService(adminRepo, &cfg.JWT)
+	dashboardServiceNew := appService.NewDashboardService(dashboardRepo)
+	viewServiceNew := appService.NewViewService(viewRepo, postServiceNew)
+
+	// ============================================
+	// Initialize Handlers
+	// ============================================
+
+	// Auth Handler - Clean Architecture 사용
+	authHandler := adminHandler.NewAuthHandlerWithCleanArch(authServiceNew)
+
+	// Post Handlers - Clean Architecture 사용
+	publicPostHandler := publicHandler.NewPostHandlerWithCleanArch(postServiceNew, viewServiceNew)
+	adminPostHandler := adminHandler.NewPostHandlerWithCleanArch(postServiceNew)
+
+	// Category Handlers - Clean Architecture 사용
+	publicCategoryHandler := publicHandler.NewCategoryHandlerWithCleanArch(categoryServiceNew, postServiceNew)
+	adminCategoryHandler := adminHandler.NewCategoryHandlerWithCleanArch(categoryServiceNew)
+
+	// Tag Handlers - Clean Architecture 사용
+	publicTagHandler := publicHandler.NewTagHandlerWithCleanArch(tagServiceNew, postServiceNew)
+	adminTagHandler := adminHandler.NewTagHandlerWithCleanArch(tagServiceNew)
+
+	// Project Handlers - Clean Architecture 사용
+	publicProjectHandler := publicHandler.NewProjectHandlerWithCleanArch(projectServiceNew)
+	adminProjectHandler := adminHandler.NewProjectHandlerWithCleanArch(projectServiceNew)
+
+	// Media Handler - Clean Architecture 사용
+	adminMediaHandler := adminHandler.NewMediaHandlerWithCleanArch(mediaServiceNew)
+
+	// Dashboard Handler - Clean Architecture 사용
+	adminDashboardHandler := adminHandler.NewDashboardHandlerWithCleanArch(dashboardServiceNew)
 
 	r := &Router{
 		engine:                engine,

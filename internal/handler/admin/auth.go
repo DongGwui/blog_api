@@ -5,16 +5,19 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/model"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/dto"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService domainService.AuthService
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+// NewAuthHandlerWithCleanArch creates a new AuthHandler with clean architecture service
+func NewAuthHandlerWithCleanArch(authService domainService.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}
@@ -26,21 +29,24 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body model.LoginRequest true "Login credentials"
-// @Success 200 {object} model.LoginResponse
+// @Param request body dto.LoginRequest true "Login credentials"
+// @Success 200 {object} dto.LoginResponse
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 401 {object} handler.ErrorResponse
 // @Router /api/admin/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req model.LoginRequest
+	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	resp, err := h.authService.Login(c.Request.Context(), &req)
+	tokenInfo, err := h.authService.Login(c.Request.Context(), domainService.LoginCommand{
+		Username: req.Username,
+		Password: req.Password,
+	})
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidCredentials) {
+		if errors.Is(err, domain.ErrInvalidCredentials) {
 			handler.Unauthorized(c, "Invalid username or password")
 			return
 		}
@@ -48,7 +54,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, resp)
+	handler.Success(c, mapper.ToLoginResponse(tokenInfo))
 }
 
 // Logout godoc
@@ -74,7 +80,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // @Tags auth
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} model.AdminResponse
+// @Success 200 {object} dto.AdminResponse
 // @Failure 401 {object} handler.ErrorResponse
 // @Router /api/admin/auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
@@ -100,7 +106,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 	admin, err := h.authService.GetAdminByID(c.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, service.ErrAdminNotFound) {
+		if errors.Is(err, domain.ErrAdminNotFound) {
 			handler.NotFound(c, "Admin not found")
 			return
 		}
@@ -108,5 +114,5 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, admin)
+	handler.Success(c, mapper.ToAdminResponse(admin))
 }

@@ -4,16 +4,19 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/domain"
+	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
 	"github.com/ydonggwui/blog-api/internal/handler"
-	"github.com/ydonggwui/blog-api/internal/service"
+	"github.com/ydonggwui/blog-api/internal/interfaces/http/mapper"
 )
 
 type CategoryHandler struct {
-	categoryService *service.CategoryService
-	postService     *service.PostService
+	categoryService domainService.CategoryService
+	postService     domainService.PostService
 }
 
-func NewCategoryHandler(categoryService *service.CategoryService, postService *service.PostService) *CategoryHandler {
+// NewCategoryHandlerWithCleanArch creates a new CategoryHandler with clean architecture
+func NewCategoryHandlerWithCleanArch(categoryService domainService.CategoryService, postService domainService.PostService) *CategoryHandler {
 	return &CategoryHandler{
 		categoryService: categoryService,
 		postService:     postService,
@@ -34,7 +37,7 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 		return
 	}
 
-	handler.Success(c, categories)
+	handler.Success(c, mapper.ToCategoryResponses(categories))
 }
 
 // GetCategoryPosts godoc
@@ -51,10 +54,10 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 func (h *CategoryHandler) GetCategoryPosts(c *gin.Context) {
 	slug := c.Param("slug")
 
-	// Get category by slug
+	// Get category by slug (Clean Architecture)
 	category, err := h.categoryService.GetCategoryBySlug(c.Request.Context(), slug)
 	if err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
+		if errors.Is(err, domain.ErrCategoryNotFound) {
 			handler.NotFound(c, "Category not found")
 			return
 		}
@@ -64,6 +67,7 @@ func (h *CategoryHandler) GetCategoryPosts(c *gin.Context) {
 
 	pagination := handler.GetPagination(c)
 
+	// Get posts (Clean Architecture)
 	posts, total, err := h.postService.ListPublishedPostsByCategory(
 		c.Request.Context(),
 		category.ID,
@@ -75,5 +79,5 @@ func (h *CategoryHandler) GetCategoryPosts(c *gin.Context) {
 		return
 	}
 
-	handler.SuccessWithMeta(c, posts, pagination.ToMeta(total))
+	handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
 }
