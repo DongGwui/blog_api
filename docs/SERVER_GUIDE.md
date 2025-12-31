@@ -139,7 +139,7 @@ ADMIN_PASSWORD=강력한_비밀번호_사용
 
 #### 3. 프로덕션용 docker-compose.yml 생성
 ```bash
-nano docker-compose.prod.yml
+nano docker-compose.yml
 ```
 
 ```yaml
@@ -256,10 +256,10 @@ CMD ["./blog-api"]
 #### 5. 서비스 시작
 ```bash
 # 빌드 및 시작
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml up -d --build
 
 # 로그 확인
-docker compose -f docker-compose.prod.yml logs -f app
+docker compose -f docker-compose.yml logs -f app
 ```
 
 #### 6. 마이그레이션 실행

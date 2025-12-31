@@ -52,3 +52,6 @@ docs/TASKS.md
 
 # Claude Code 설정 (로컬 개발용)
 .claude/
+
+# docker 홈서버
+docker-compose.yml
