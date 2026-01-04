@@ -17,6 +17,8 @@ func ToMediaResponse(m *entity.Media) dto.MediaResponse {
 		Size:         m.Size,
 		Width:        m.Width,
 		Height:       m.Height,
+		ThumbnailSM:  m.ThumbnailSM,
+		ThumbnailMD:  m.ThumbnailMD,
 		CreatedAt:    m.CreatedAt,
 	}
 }
@@ -47,5 +49,7 @@ func ToUploadMediaResponse(f *entity.UploadedFile) dto.UploadMediaResponse {
 		URL:          f.URL,
 		MimeType:     f.MimeType,
 		Size:         f.Size,
+		ThumbnailSM:  f.ThumbnailSM,
+		ThumbnailMD:  f.ThumbnailMD,
 	}
 }

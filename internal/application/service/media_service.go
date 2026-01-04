@@ -1,9 +1,11 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"path/filepath"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +13,7 @@ import (
 	"github.com/ydonggwui/blog-api/internal/domain/entity"
 	"github.com/ydonggwui/blog-api/internal/domain/repository"
 	domainService "github.com/ydonggwui/blog-api/internal/domain/service"
+	imageutil "github.com/ydonggwui/blog-api/internal/util/image"
 )
 
 // Allowed MIME types for upload
@@ -22,18 +25,33 @@ var allowedMimeTypes = map[string]bool{
 	"image/svg+xml": true,
 }
 
+// MIME types that should not be processed (keep original)
+var skipProcessingTypes = map[string]bool{
+	"image/gif":     true, // Preserve animation
+	"image/svg+xml": true, // Vector format
+}
+
 // Maximum file size (10MB)
 const maxFileSize = 10 * 1024 * 1024
 
+// Image processing settings
+const (
+	compressionQuality = 85  // WebP quality (0-100)
+	thumbnailSmallSize = 150 // Small thumbnail width
+	thumbnailMediumSize = 400 // Medium thumbnail width
+)
+
 type mediaService struct {
-	mediaRepo   repository.MediaRepository
-	storageRepo repository.StorageRepository
+	mediaRepo      repository.MediaRepository
+	storageRepo    repository.StorageRepository
+	imageProcessor *imageutil.Processor
 }
 
 func NewMediaService(mediaRepo repository.MediaRepository, storageRepo repository.StorageRepository) domainService.MediaService {
 	return &mediaService{
-		mediaRepo:   mediaRepo,
-		storageRepo: storageRepo,
+		mediaRepo:      mediaRepo,
+		storageRepo:    storageRepo,
+		imageProcessor: imageutil.NewProcessor(compressionQuality),
 	}
 }
 
@@ -66,16 +84,27 @@ func (s *mediaService) UploadMedia(ctx context.Context, cmd domainService.Upload
 		return nil, domain.ErrFileTooLarge
 	}
 
-	// Generate unique filename with UUID
-	ext := filepath.Ext(cmd.OriginalName)
-	if ext == "" {
-		ext = getExtensionFromMimeType(cmd.MimeType)
-	}
-	filename := uuid.New().String() + ext
+	// Generate unique base filename with UUID
+	baseFilename := uuid.New().String()
 
-	// Generate path: year/month/filename
+	// Generate path prefix: year/month/
 	now := time.Now()
-	path := fmt.Sprintf("%d/%02d/%s", now.Year(), now.Month(), filename)
+	pathPrefix := fmt.Sprintf("%d/%02d/", now.Year(), now.Month())
+
+	// Check if we should skip image processing
+	if skipProcessingTypes[cmd.MimeType] {
+		return s.uploadOriginal(ctx, cmd, baseFilename, pathPrefix)
+	}
+
+	// Process image (compress and generate thumbnails)
+	return s.uploadProcessed(ctx, cmd, baseFilename, pathPrefix)
+}
+
+// uploadOriginal uploads the file without any processing (for GIF, SVG)
+func (s *mediaService) uploadOriginal(ctx context.Context, cmd domainService.UploadMediaCommand, baseFilename, pathPrefix string) (*entity.UploadedFile, error) {
+	ext := getExtensionFromMimeType(cmd.MimeType)
+	filename := baseFilename + ext
+	path := pathPrefix + filename
 
 	// Upload to storage
 	err := s.storageRepo.Upload(ctx, path, cmd.File, cmd.Size, cmd.MimeType)
@@ -98,7 +127,6 @@ func (s *mediaService) UploadMedia(ctx context.Context, cmd domainService.Upload
 
 	created, err := s.mediaRepo.Create(ctx, media)
 	if err != nil {
-		// Try to delete the uploaded file if database insert fails
 		_ = s.storageRepo.Delete(ctx, path)
 		return nil, err
 	}
@@ -113,6 +141,114 @@ func (s *mediaService) UploadMedia(ctx context.Context, cmd domainService.Upload
 	}, nil
 }
 
+// uploadProcessed processes the image (compress to WebP, generate thumbnails)
+func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.UploadMediaCommand, baseFilename, pathPrefix string) (*entity.UploadedFile, error) {
+	// Read file content into buffer
+	fileData, err := io.ReadAll(cmd.File)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to read file: %v", domain.ErrUploadFailed, err)
+	}
+
+	// Decode image
+	img, err := s.imageProcessor.DecodeImage(bytes.NewReader(fileData))
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to decode image: %v", domain.ErrUploadFailed, err)
+	}
+
+	// Get original dimensions
+	width, height := s.imageProcessor.GetDimensions(img)
+
+	// Encode original to WebP
+	webpData, err := s.imageProcessor.EncodeToWebP(img)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to encode to webp: %v", domain.ErrUploadFailed, err)
+	}
+
+	// Generate thumbnails
+	thumbnails, err := s.imageProcessor.GenerateThumbnails(img, map[string]int{
+		"_sm": thumbnailSmallSize,
+		"_md": thumbnailMediumSize,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to generate thumbnails: %v", domain.ErrUploadFailed, err)
+	}
+
+	// Prepare file paths
+	filename := baseFilename + ".webp"
+	mainPath := pathPrefix + filename
+	smPath := pathPrefix + baseFilename + "_sm.webp"
+	mdPath := pathPrefix + baseFilename + "_md.webp"
+
+	// Upload main image
+	err = s.storageRepo.Upload(ctx, mainPath, bytes.NewReader(webpData), int64(len(webpData)), "image/webp")
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to upload main image: %v", domain.ErrUploadFailed, err)
+	}
+
+	// Upload thumbnails
+	var uploadedPaths []string
+	uploadedPaths = append(uploadedPaths, mainPath)
+
+	smData := thumbnails["_sm"].Data
+	err = s.storageRepo.Upload(ctx, smPath, bytes.NewReader(smData), int64(len(smData)), "image/webp")
+	if err != nil {
+		s.cleanupFiles(ctx, uploadedPaths)
+		return nil, fmt.Errorf("%w: failed to upload small thumbnail: %v", domain.ErrUploadFailed, err)
+	}
+	uploadedPaths = append(uploadedPaths, smPath)
+
+	mdData := thumbnails["_md"].Data
+	err = s.storageRepo.Upload(ctx, mdPath, bytes.NewReader(mdData), int64(len(mdData)), "image/webp")
+	if err != nil {
+		s.cleanupFiles(ctx, uploadedPaths)
+		return nil, fmt.Errorf("%w: failed to upload medium thumbnail: %v", domain.ErrUploadFailed, err)
+	}
+	uploadedPaths = append(uploadedPaths, mdPath)
+
+	// Generate URLs
+	mainURL := s.storageRepo.GenerateURL(mainPath)
+	smURL := s.storageRepo.GenerateURL(smPath)
+	mdURL := s.storageRepo.GenerateURL(mdPath)
+
+	// Save to database
+	media := &entity.Media{
+		Filename:     filename,
+		OriginalName: cmd.OriginalName,
+		Path:         mainPath,
+		URL:          mainURL,
+		MimeType:     "image/webp",
+		Size:         int64(len(webpData)),
+		Width:        int32(width),
+		Height:       int32(height),
+		ThumbnailSM:  smURL,
+		ThumbnailMD:  mdURL,
+	}
+
+	created, err := s.mediaRepo.Create(ctx, media)
+	if err != nil {
+		s.cleanupFiles(ctx, uploadedPaths)
+		return nil, err
+	}
+
+	return &entity.UploadedFile{
+		ID:           created.ID,
+		Filename:     created.Filename,
+		OriginalName: created.OriginalName,
+		URL:          created.URL,
+		MimeType:     created.MimeType,
+		Size:         created.Size,
+		ThumbnailSM:  created.ThumbnailSM,
+		ThumbnailMD:  created.ThumbnailMD,
+	}, nil
+}
+
+// cleanupFiles deletes uploaded files on error
+func (s *mediaService) cleanupFiles(ctx context.Context, paths []string) {
+	for _, path := range paths {
+		_ = s.storageRepo.Delete(ctx, path)
+	}
+}
+
 func (s *mediaService) DeleteMedia(ctx context.Context, id int32) error {
 	// Get media info
 	media, err := s.mediaRepo.FindByID(ctx, id)
@@ -120,14 +256,41 @@ func (s *mediaService) DeleteMedia(ctx context.Context, id int32) error {
 		return err
 	}
 
-	// Delete from storage
+	// Delete main file from storage
 	err = s.storageRepo.Delete(ctx, media.Path)
 	if err != nil {
 		return fmt.Errorf("failed to delete file from storage: %w", err)
 	}
 
+	// Delete thumbnails if they exist
+	if media.ThumbnailSM != "" {
+		smPath := extractPathFromURL(media.ThumbnailSM)
+		if smPath != "" {
+			_ = s.storageRepo.Delete(ctx, smPath)
+		}
+	}
+	if media.ThumbnailMD != "" {
+		mdPath := extractPathFromURL(media.ThumbnailMD)
+		if mdPath != "" {
+			_ = s.storageRepo.Delete(ctx, mdPath)
+		}
+	}
+
 	// Delete from database
 	return s.mediaRepo.Delete(ctx, id)
+}
+
+// extractPathFromURL extracts the storage path from a full URL
+// URL format: {publicURL}/{bucket}/{path}
+func extractPathFromURL(url string) string {
+	// Find the path part after the bucket name
+	// Example: http://localhost:9000/blog/2024/01/uuid_sm.webp -> 2024/01/uuid_sm.webp
+	parts := strings.Split(url, "/")
+	if len(parts) < 5 {
+		return ""
+	}
+	// Skip protocol, host, and bucket, join the rest
+	return strings.Join(parts[4:], "/")
 }
 
 // getExtensionFromMimeType returns the file extension for a MIME type

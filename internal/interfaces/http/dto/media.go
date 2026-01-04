@@ -13,6 +13,8 @@ type MediaResponse struct {
 	Size         int64     `json:"size,omitempty"`
 	Width        int32     `json:"width,omitempty"`
 	Height       int32     `json:"height,omitempty"`
+	ThumbnailSM  string    `json:"thumbnail_sm,omitempty"`
+	ThumbnailMD  string    `json:"thumbnail_md,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -30,4 +32,6 @@ type UploadMediaResponse struct {
 	URL          string `json:"url"`
 	MimeType     string `json:"mime_type,omitempty"`
 	Size         int64  `json:"size,omitempty"`
+	ThumbnailSM  string `json:"thumbnail_sm,omitempty"`
+	ThumbnailMD  string `json:"thumbnail_md,omitempty"`
 }

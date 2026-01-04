@@ -38,6 +38,8 @@ type Medium struct {
 	Width        sql.NullInt32  `json:"width"`
 	Height       sql.NullInt32  `json:"height"`
 	CreatedAt    sql.NullTime   `json:"created_at"`
+	ThumbnailSm  sql.NullString `json:"thumbnail_sm"`
+	ThumbnailMd  sql.NullString `json:"thumbnail_md"`
 }
 
 type Post struct {

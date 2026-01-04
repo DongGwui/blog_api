@@ -13,6 +13,8 @@ type Media struct {
 	Size         int64
 	Width        int32
 	Height       int32
+	ThumbnailSM  string
+	ThumbnailMD  string
 	CreatedAt    time.Time
 }
 
@@ -24,4 +26,6 @@ type UploadedFile struct {
 	URL          string
 	MimeType     string
 	Size         int64
+	ThumbnailSM  string
+	ThumbnailMD  string
 }

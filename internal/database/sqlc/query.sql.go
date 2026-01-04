@@ -193,9 +193,9 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 }
 
 const createMedia = `-- name: CreateMedia :one
-INSERT INTO media (filename, original_name, path, url, mime_type, size, width, height)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, filename, original_name, path, url, mime_type, size, width, height, created_at
+INSERT INTO media (filename, original_name, path, url, mime_type, size, width, height, thumbnail_sm, thumbnail_md)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, filename, original_name, path, url, mime_type, size, width, height, created_at, thumbnail_sm, thumbnail_md
 `
 
 type CreateMediaParams struct {
@@ -207,6 +207,8 @@ type CreateMediaParams struct {
 	Size         sql.NullInt64  `json:"size"`
 	Width        sql.NullInt32  `json:"width"`
 	Height       sql.NullInt32  `json:"height"`
+	ThumbnailSm  sql.NullString `json:"thumbnail_sm"`
+	ThumbnailMd  sql.NullString `json:"thumbnail_md"`
 }
 
 func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Medium, error) {
@@ -219,6 +221,8 @@ func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Mediu
 		arg.Size,
 		arg.Width,
 		arg.Height,
+		arg.ThumbnailSm,
+		arg.ThumbnailMd,
 	)
 	var i Medium
 	err := row.Scan(
@@ -232,6 +236,8 @@ func (q *Queries) CreateMedia(ctx context.Context, arg CreateMediaParams) (Mediu
 		&i.Width,
 		&i.Height,
 		&i.CreatedAt,
+		&i.ThumbnailSm,
+		&i.ThumbnailMd,
 	)
 	return i, err
 }
@@ -537,7 +543,7 @@ func (q *Queries) GetCategoryStats(ctx context.Context) ([]GetCategoryStatsRow, 
 }
 
 const getMediaByID = `-- name: GetMediaByID :one
-SELECT id, filename, original_name, path, url, mime_type, size, width, height, created_at FROM media WHERE id = $1
+SELECT id, filename, original_name, path, url, mime_type, size, width, height, created_at, thumbnail_sm, thumbnail_md FROM media WHERE id = $1
 `
 
 func (q *Queries) GetMediaByID(ctx context.Context, id int32) (Medium, error) {
@@ -554,6 +560,8 @@ func (q *Queries) GetMediaByID(ctx context.Context, id int32) (Medium, error) {
 		&i.Width,
 		&i.Height,
 		&i.CreatedAt,
+		&i.ThumbnailSm,
+		&i.ThumbnailMd,
 	)
 	return i, err
 }
@@ -1100,7 +1108,7 @@ func (q *Queries) ListFeaturedProjects(ctx context.Context) ([]Project, error) {
 
 const listMedia = `-- name: ListMedia :many
 
-SELECT id, filename, original_name, path, url, mime_type, size, width, height, created_at FROM media ORDER BY created_at DESC LIMIT $1 OFFSET $2
+SELECT id, filename, original_name, path, url, mime_type, size, width, height, created_at, thumbnail_sm, thumbnail_md FROM media ORDER BY created_at DESC LIMIT $1 OFFSET $2
 `
 
 type ListMediaParams struct {
@@ -1131,6 +1139,8 @@ func (q *Queries) ListMedia(ctx context.Context, arg ListMediaParams) ([]Medium,
 			&i.Width,
 			&i.Height,
 			&i.CreatedAt,
+			&i.ThumbnailSm,
+			&i.ThumbnailMd,
 		); err != nil {
 			return nil, err
 		}

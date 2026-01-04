@@ -542,6 +542,12 @@ func toMediaEntity(m sqlc.Medium) *entity.Media {
 	if m.Height.Valid {
 		media.Height = m.Height.Int32
 	}
+	if m.ThumbnailSm.Valid {
+		media.ThumbnailSM = m.ThumbnailSm.String
+	}
+	if m.ThumbnailMd.Valid {
+		media.ThumbnailMD = m.ThumbnailMd.String
+	}
 	if m.CreatedAt.Valid {
 		media.CreatedAt = m.CreatedAt.Time
 	}
@@ -566,6 +572,8 @@ func toCreateMediaParams(m *entity.Media) sqlc.CreateMediaParams {
 		Size:         sql.NullInt64{Int64: m.Size, Valid: m.Size > 0},
 		Width:        sql.NullInt32{Int32: m.Width, Valid: m.Width > 0},
 		Height:       sql.NullInt32{Int32: m.Height, Valid: m.Height > 0},
+		ThumbnailSm:  sql.NullString{String: m.ThumbnailSM, Valid: m.ThumbnailSM != ""},
+		ThumbnailMd:  sql.NullString{String: m.ThumbnailMD, Valid: m.ThumbnailMD != ""},
 	}
 }
 

@@ -291,8 +291,8 @@ SELECT COUNT(*) FROM media;
 SELECT * FROM media WHERE id = $1;
 
 -- name: CreateMedia :one
-INSERT INTO media (filename, original_name, path, url, mime_type, size, width, height)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO media (filename, original_name, path, url, mime_type, size, width, height, thumbnail_sm, thumbnail_md)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: DeleteMedia :exec
