@@ -1249,41 +1249,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/public/categories/{slug}": {
-            "get": {
-                "description": "Get a single category by its slug",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "categories"
-                ],
-                "summary": "Get a category by slug",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Category slug",
-                        "name": "slug",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/public/categories/{slug}/posts": {
             "get": {
                 "description": "Get a paginated list of posts in a category",
@@ -1579,41 +1544,6 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/handler.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/public/tags/{slug}": {
-            "get": {
-                "description": "Get a single tag by its slug",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tags"
-                ],
-                "summary": "Get a tag by slug",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Tag slug",
-                        "name": "slug",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }

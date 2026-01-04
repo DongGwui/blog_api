@@ -40,31 +40,6 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 	handler.Success(c, mapper.ToTagResponses(tags))
 }
 
-// GetTag godoc
-// @Summary Get a tag by slug
-// @Description Get a single tag by its slug
-// @Tags tags
-// @Produce json
-// @Param slug path string true "Tag slug"
-// @Success 200 {object} handler.Response
-// @Failure 404 {object} handler.ErrorResponse
-// @Router /api/public/tags/{slug} [get]
-func (h *TagHandler) GetTag(c *gin.Context) {
-	slug := c.Param("slug")
-
-	tag, err := h.tagService.GetTagBySlug(c.Request.Context(), slug)
-	if err != nil {
-		if errors.Is(err, domain.ErrTagNotFound) {
-			handler.NotFound(c, "Tag not found")
-			return
-		}
-		handler.InternalError(c, "Failed to fetch tag")
-		return
-	}
-
-	handler.Success(c, mapper.ToTagResponse(tag))
-}
-
 // GetTagPosts godoc
 // @Summary Get posts by tag
 // @Description Get a paginated list of posts with a tag

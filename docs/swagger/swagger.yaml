@@ -1028,29 +1028,6 @@ paths:
       summary: List all categories
       tags:
       - categories
-  /api/public/categories/{slug}:
-    get:
-      description: Get a single category by its slug
-      parameters:
-      - description: Category slug
-        in: path
-        name: slug
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      summary: Get a category by slug
-      tags:
-      - categories
   /api/public/categories/{slug}/posts:
     get:
       description: Get a paginated list of posts in a category
@@ -1248,29 +1225,6 @@ paths:
           schema:
             $ref: '#/definitions/handler.Response'
       summary: List all tags
-      tags:
-      - tags
-  /api/public/tags/{slug}:
-    get:
-      description: Get a single tag by its slug
-      parameters:
-      - description: Tag slug
-        in: path
-        name: slug
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      summary: Get a tag by slug
       tags:
       - tags
   /api/public/tags/{slug}/posts:
