@@ -141,7 +141,7 @@ func (s *mediaService) uploadOriginal(ctx context.Context, cmd domainService.Upl
 	}, nil
 }
 
-// uploadProcessed processes the image (compress to WebP, generate thumbnails)
+// uploadProcessed processes the image (compress to JPEG, generate thumbnails)
 func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.UploadMediaCommand, baseFilename, pathPrefix string) (*entity.UploadedFile, error) {
 	// Read file content into buffer
 	fileData, err := io.ReadAll(cmd.File)
@@ -158,10 +158,10 @@ func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.Up
 	// Get original dimensions
 	width, height := s.imageProcessor.GetDimensions(img)
 
-	// Encode original to WebP
-	webpData, err := s.imageProcessor.EncodeToWebP(img)
+	// Encode original to JPEG
+	jpegData, err := s.imageProcessor.EncodeToJPEG(img)
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to encode to webp: %v", domain.ErrUploadFailed, err)
+		return nil, fmt.Errorf("%w: failed to encode to jpeg: %v", domain.ErrUploadFailed, err)
 	}
 
 	// Generate thumbnails
@@ -174,13 +174,13 @@ func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.Up
 	}
 
 	// Prepare file paths
-	filename := baseFilename + ".webp"
+	filename := baseFilename + ".jpg"
 	mainPath := pathPrefix + filename
-	smPath := pathPrefix + baseFilename + "_sm.webp"
-	mdPath := pathPrefix + baseFilename + "_md.webp"
+	smPath := pathPrefix + baseFilename + "_sm.jpg"
+	mdPath := pathPrefix + baseFilename + "_md.jpg"
 
 	// Upload main image
-	err = s.storageRepo.Upload(ctx, mainPath, bytes.NewReader(webpData), int64(len(webpData)), "image/webp")
+	err = s.storageRepo.Upload(ctx, mainPath, bytes.NewReader(jpegData), int64(len(jpegData)), "image/jpeg")
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to upload main image: %v", domain.ErrUploadFailed, err)
 	}
@@ -190,7 +190,7 @@ func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.Up
 	uploadedPaths = append(uploadedPaths, mainPath)
 
 	smData := thumbnails["_sm"].Data
-	err = s.storageRepo.Upload(ctx, smPath, bytes.NewReader(smData), int64(len(smData)), "image/webp")
+	err = s.storageRepo.Upload(ctx, smPath, bytes.NewReader(smData), int64(len(smData)), "image/jpeg")
 	if err != nil {
 		s.cleanupFiles(ctx, uploadedPaths)
 		return nil, fmt.Errorf("%w: failed to upload small thumbnail: %v", domain.ErrUploadFailed, err)
@@ -198,7 +198,7 @@ func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.Up
 	uploadedPaths = append(uploadedPaths, smPath)
 
 	mdData := thumbnails["_md"].Data
-	err = s.storageRepo.Upload(ctx, mdPath, bytes.NewReader(mdData), int64(len(mdData)), "image/webp")
+	err = s.storageRepo.Upload(ctx, mdPath, bytes.NewReader(mdData), int64(len(mdData)), "image/jpeg")
 	if err != nil {
 		s.cleanupFiles(ctx, uploadedPaths)
 		return nil, fmt.Errorf("%w: failed to upload medium thumbnail: %v", domain.ErrUploadFailed, err)
@@ -216,8 +216,8 @@ func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.Up
 		OriginalName: cmd.OriginalName,
 		Path:         mainPath,
 		URL:          mainURL,
-		MimeType:     "image/webp",
-		Size:         int64(len(webpData)),
+		MimeType:     "image/jpeg",
+		Size:         int64(len(jpegData)),
 		Width:        int32(width),
 		Height:       int32(height),
 		ThumbnailSM:  smURL,

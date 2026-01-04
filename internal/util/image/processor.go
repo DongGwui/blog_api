@@ -3,21 +3,21 @@ package image
 import (
 	"bytes"
 	"image"
+	"image/jpeg"
 	"io"
 
-	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
 )
 
 // Processor handles image processing operations
 type Processor struct {
-	quality int // WebP quality (0-100)
+	quality int // JPEG quality (1-100)
 }
 
 // NewProcessor creates a new image processor with the given quality setting
 func NewProcessor(quality int) *Processor {
-	if quality < 0 {
-		quality = 0
+	if quality < 1 {
+		quality = 1
 	}
 	if quality > 100 {
 		quality = 100
@@ -60,23 +60,19 @@ func (p *Processor) ResizeToWidth(img image.Image, maxWidth int) image.Image {
 	return imaging.Resize(img, maxWidth, 0, imaging.Lanczos)
 }
 
-// EncodeToWebP encodes an image to WebP format with the processor's quality setting
-func (p *Processor) EncodeToWebP(img image.Image) ([]byte, error) {
+// EncodeToJPEG encodes an image to JPEG format with the processor's quality setting
+func (p *Processor) EncodeToJPEG(img image.Image) ([]byte, error) {
 	var buf bytes.Buffer
 
-	options := &webp.Options{
-		Lossless: false,
-		Quality:  float32(p.quality),
-	}
-
-	if err := webp.Encode(&buf, img, options); err != nil {
+	err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: p.quality})
+	if err != nil {
 		return nil, err
 	}
 
 	return buf.Bytes(), nil
 }
 
-// ProcessImage processes an image: decodes, optionally resizes, and encodes to WebP
+// ProcessImage processes an image: decodes, optionally resizes, and encodes to JPEG
 // If maxWidth is 0, no resizing is performed
 func (p *Processor) ProcessImage(r io.Reader, maxWidth int) (*ProcessResult, error) {
 	img, err := p.DecodeImage(r)
@@ -90,7 +86,7 @@ func (p *Processor) ProcessImage(r io.Reader, maxWidth int) (*ProcessResult, err
 
 	width, height := p.GetDimensions(img)
 
-	data, err := p.EncodeToWebP(img)
+	data, err := p.EncodeToJPEG(img)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +107,7 @@ func (p *Processor) GenerateThumbnails(img image.Image, sizes map[string]int) (m
 		resized := p.ResizeToWidth(img, maxWidth)
 		width, height := p.GetDimensions(resized)
 
-		data, err := p.EncodeToWebP(resized)
+		data, err := p.EncodeToJPEG(resized)
 		if err != nil {
 			return nil, err
 		}
