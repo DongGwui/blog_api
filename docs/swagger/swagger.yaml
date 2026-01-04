@@ -389,6 +389,30 @@ paths:
       summary: Delete a category
       tags:
       - admin/categories
+    get:
+      description: Get a single category by its ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a category by ID (admin)
+      tags:
+      - admin/categories
     put:
       consumes:
       - application/json
@@ -925,6 +949,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete a tag
+      tags:
+      - admin/tags
+    get:
+      description: Get a single tag by its ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a tag by ID (admin)
       tags:
       - admin/tags
     put:

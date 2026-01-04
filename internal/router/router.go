@@ -192,12 +192,14 @@ func (r *Router) setupRoutes() {
 
 			// Categories
 			admin.GET("/categories", r.adminCategoryHandler.ListCategories)
+			admin.GET("/categories/:id", r.adminCategoryHandler.GetCategory)
 			admin.POST("/categories", r.adminCategoryHandler.CreateCategory)
 			admin.PUT("/categories/:id", r.adminCategoryHandler.UpdateCategory)
 			admin.DELETE("/categories/:id", r.adminCategoryHandler.DeleteCategory)
 
 			// Tags
 			admin.GET("/tags", r.adminTagHandler.ListTags)
+			admin.GET("/tags/:id", r.adminTagHandler.GetTag)
 			admin.POST("/tags", r.adminTagHandler.CreateTag)
 			admin.PUT("/tags/:id", r.adminTagHandler.UpdateTag)
 			admin.DELETE("/tags/:id", r.adminTagHandler.DeleteTag)

@@ -40,6 +40,36 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	handler.Success(c, mapper.ToCategoryResponses(categories))
 }
 
+// GetCategory godoc
+// @Summary Get a category by ID (admin)
+// @Description Get a single category by its ID
+// @Tags admin/categories
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Category ID"
+// @Success 200 {object} handler.Response
+// @Failure 404 {object} handler.ErrorResponse
+// @Router /api/admin/categories/{id} [get]
+func (h *CategoryHandler) GetCategory(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
+	if err != nil {
+		handler.BadRequest(c, "Invalid category ID")
+		return
+	}
+
+	category, err := h.categoryService.GetCategoryByID(c.Request.Context(), int32(id))
+	if err != nil {
+		if errors.Is(err, domain.ErrCategoryNotFound) {
+			handler.NotFound(c, "Category not found")
+			return
+		}
+		handler.InternalError(c, "Failed to fetch category")
+		return
+	}
+
+	handler.Success(c, mapper.ToCategoryResponse(category))
+}
+
 // CreateCategory godoc
 // @Summary Create a new category
 // @Description Create a new category

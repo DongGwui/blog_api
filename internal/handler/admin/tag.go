@@ -41,6 +41,36 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 	handler.Success(c, mapper.ToTagResponses(tags))
 }
 
+// GetTag godoc
+// @Summary Get a tag by ID (admin)
+// @Description Get a single tag by its ID
+// @Tags admin/tags
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Tag ID"
+// @Success 200 {object} handler.Response
+// @Failure 404 {object} handler.ErrorResponse
+// @Router /api/admin/tags/{id} [get]
+func (h *TagHandler) GetTag(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 32)
+	if err != nil {
+		handler.BadRequest(c, "Invalid tag ID")
+		return
+	}
+
+	tag, err := h.tagService.GetTagByID(c.Request.Context(), int32(id))
+	if err != nil {
+		if errors.Is(err, domain.ErrTagNotFound) {
+			handler.NotFound(c, "Tag not found")
+			return
+		}
+		handler.InternalError(c, "Failed to fetch tag")
+		return
+	}
+
+	handler.Success(c, mapper.ToTagResponse(tag))
+}
+
 // CreateTag godoc
 // @Summary Create a new tag
 // @Description Create a new tag
