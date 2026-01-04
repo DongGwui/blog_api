@@ -1,5 +1,217 @@
 basePath: /api
 definitions:
+  dto.AdminResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+  dto.CreateCategoryRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    required:
+    - name
+    type: object
+  dto.CreatePostRequest:
+    properties:
+      category_id:
+        type: integer
+      content:
+        type: string
+      excerpt:
+        maxLength: 500
+        type: string
+      slug:
+        type: string
+      status:
+        type: string
+      tag_ids:
+        items:
+          type: integer
+        type: array
+      thumbnail:
+        type: string
+      title:
+        maxLength: 200
+        type: string
+    required:
+    - content
+    - title
+    type: object
+  dto.CreateProjectRequest:
+    properties:
+      content:
+        type: string
+      demo_url:
+        type: string
+      description:
+        type: string
+      github_url:
+        type: string
+      images:
+        items:
+          type: string
+        type: array
+      is_featured:
+        type: boolean
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      tech_stack:
+        items:
+          type: string
+        type: array
+      thumbnail:
+        type: string
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
+  dto.CreateTagRequest:
+    properties:
+      name:
+        maxLength: 50
+        type: string
+      slug:
+        type: string
+    required:
+    - name
+    type: object
+  dto.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  dto.LoginResponse:
+    properties:
+      expires_at:
+        type: string
+      token:
+        type: string
+    type: object
+  dto.ProjectOrderItem:
+    properties:
+      id:
+        type: integer
+      sort_order:
+        type: integer
+    required:
+    - id
+    - sort_order
+    type: object
+  dto.PublishRequest:
+    properties:
+      publish:
+        type: boolean
+    type: object
+  dto.ReorderProjectsRequest:
+    properties:
+      orders:
+        items:
+          $ref: '#/definitions/dto.ProjectOrderItem'
+        type: array
+    required:
+    - orders
+    type: object
+  dto.UpdateCategoryRequest:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 50
+        type: string
+      slug:
+        type: string
+      sort_order:
+        type: integer
+    required:
+    - name
+    type: object
+  dto.UpdatePostRequest:
+    properties:
+      category_id:
+        type: integer
+      content:
+        type: string
+      excerpt:
+        maxLength: 500
+        type: string
+      slug:
+        type: string
+      tag_ids:
+        items:
+          type: integer
+        type: array
+      thumbnail:
+        type: string
+      title:
+        maxLength: 200
+        type: string
+    required:
+    - content
+    - title
+    type: object
+  dto.UpdateProjectRequest:
+    properties:
+      content:
+        type: string
+      demo_url:
+        type: string
+      description:
+        type: string
+      github_url:
+        type: string
+      images:
+        items:
+          type: string
+        type: array
+      is_featured:
+        type: boolean
+      slug:
+        type: string
+      sort_order:
+        type: integer
+      tech_stack:
+        items:
+          type: string
+        type: array
+      thumbnail:
+        type: string
+      title:
+        maxLength: 200
+        minLength: 1
+        type: string
+    type: object
+  dto.UpdateTagRequest:
+    properties:
+      name:
+        maxLength: 50
+        type: string
+      slug:
+        type: string
+    required:
+    - name
+    type: object
   handler.ErrorDetail:
     properties:
       code:
@@ -29,218 +241,6 @@ definitions:
       meta:
         $ref: '#/definitions/handler.Meta'
     type: object
-  model.AdminResponse:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: integer
-      username:
-        type: string
-    type: object
-  model.CreateCategoryRequest:
-    properties:
-      description:
-        type: string
-      name:
-        maxLength: 50
-        type: string
-      slug:
-        type: string
-      sort_order:
-        type: integer
-    required:
-    - name
-    type: object
-  model.CreatePostRequest:
-    properties:
-      category_id:
-        type: integer
-      content:
-        type: string
-      excerpt:
-        maxLength: 500
-        type: string
-      slug:
-        type: string
-      status:
-        type: string
-      tag_ids:
-        items:
-          type: integer
-        type: array
-      thumbnail:
-        type: string
-      title:
-        maxLength: 200
-        type: string
-    required:
-    - content
-    - title
-    type: object
-  model.CreateProjectRequest:
-    properties:
-      content:
-        type: string
-      demo_url:
-        type: string
-      description:
-        type: string
-      github_url:
-        type: string
-      images:
-        items:
-          type: string
-        type: array
-      is_featured:
-        type: boolean
-      slug:
-        type: string
-      sort_order:
-        type: integer
-      tech_stack:
-        items:
-          type: string
-        type: array
-      thumbnail:
-        type: string
-      title:
-        maxLength: 200
-        minLength: 1
-        type: string
-    required:
-    - title
-    type: object
-  model.CreateTagRequest:
-    properties:
-      name:
-        maxLength: 50
-        type: string
-      slug:
-        type: string
-    required:
-    - name
-    type: object
-  model.LoginRequest:
-    properties:
-      password:
-        type: string
-      username:
-        type: string
-    required:
-    - password
-    - username
-    type: object
-  model.LoginResponse:
-    properties:
-      expires_at:
-        type: string
-      token:
-        type: string
-    type: object
-  model.ProjectOrder:
-    properties:
-      id:
-        type: integer
-      sort_order:
-        type: integer
-    required:
-    - id
-    - sort_order
-    type: object
-  model.PublishRequest:
-    properties:
-      publish:
-        type: boolean
-    type: object
-  model.ReorderProjectsRequest:
-    properties:
-      orders:
-        items:
-          $ref: '#/definitions/model.ProjectOrder'
-        type: array
-    required:
-    - orders
-    type: object
-  model.UpdateCategoryRequest:
-    properties:
-      description:
-        type: string
-      name:
-        maxLength: 50
-        type: string
-      slug:
-        type: string
-      sort_order:
-        type: integer
-    required:
-    - name
-    type: object
-  model.UpdatePostRequest:
-    properties:
-      category_id:
-        type: integer
-      content:
-        type: string
-      excerpt:
-        maxLength: 500
-        type: string
-      slug:
-        type: string
-      tag_ids:
-        items:
-          type: integer
-        type: array
-      thumbnail:
-        type: string
-      title:
-        maxLength: 200
-        type: string
-    required:
-    - content
-    - title
-    type: object
-  model.UpdateProjectRequest:
-    properties:
-      content:
-        type: string
-      demo_url:
-        type: string
-      description:
-        type: string
-      github_url:
-        type: string
-      images:
-        items:
-          type: string
-        type: array
-      is_featured:
-        type: boolean
-      slug:
-        type: string
-      sort_order:
-        type: integer
-      tech_stack:
-        items:
-          type: string
-        type: array
-      thumbnail:
-        type: string
-      title:
-        maxLength: 200
-        minLength: 1
-        type: string
-    type: object
-  model.UpdateTagRequest:
-    properties:
-      name:
-        maxLength: 50
-        type: string
-      slug:
-        type: string
-    required:
-    - name
-    type: object
 host: localhost:8080
 info:
   contact:
@@ -265,14 +265,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.LoginRequest'
+          $ref: '#/definitions/dto.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.LoginResponse'
+            $ref: '#/definitions/dto.LoginResponse'
         "400":
           description: Bad Request
           schema:
@@ -308,7 +308,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.AdminResponse'
+            $ref: '#/definitions/dto.AdminResponse'
         "401":
           description: Unauthorized
           schema:
@@ -343,7 +343,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateCategoryRequest'
+          $ref: '#/definitions/dto.CreateCategoryRequest'
       produces:
       - application/json
       responses:
@@ -404,7 +404,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateCategoryRequest'
+          $ref: '#/definitions/dto.UpdateCategoryRequest'
       produces:
       - application/json
       responses:
@@ -562,7 +562,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreatePostRequest'
+          $ref: '#/definitions/dto.CreatePostRequest'
       produces:
       - application/json
       responses:
@@ -643,7 +643,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdatePostRequest'
+          $ref: '#/definitions/dto.UpdatePostRequest'
       produces:
       - application/json
       responses:
@@ -684,7 +684,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.PublishRequest'
+          $ref: '#/definitions/dto.PublishRequest'
       produces:
       - application/json
       responses:
@@ -726,7 +726,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateProjectRequest'
+          $ref: '#/definitions/dto.CreateProjectRequest'
       produces:
       - application/json
       responses:
@@ -807,7 +807,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateProjectRequest'
+          $ref: '#/definitions/dto.UpdateProjectRequest'
       produces:
       - application/json
       responses:
@@ -843,7 +843,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.ReorderProjectsRequest'
+          $ref: '#/definitions/dto.ReorderProjectsRequest'
       produces:
       - application/json
       responses:
@@ -885,7 +885,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateTagRequest'
+          $ref: '#/definitions/dto.CreateTagRequest'
       produces:
       - application/json
       responses:
@@ -942,7 +942,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateTagRequest'
+          $ref: '#/definitions/dto.UpdateTagRequest'
       produces:
       - application/json
       responses:
@@ -978,6 +978,29 @@ paths:
           schema:
             $ref: '#/definitions/handler.Response'
       summary: List all categories
+      tags:
+      - categories
+  /api/public/categories/{slug}:
+    get:
+      description: Get a single category by its slug
+      parameters:
+      - description: Category slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get a category by slug
       tags:
       - categories
   /api/public/categories/{slug}/posts:
@@ -1177,6 +1200,29 @@ paths:
           schema:
             $ref: '#/definitions/handler.Response'
       summary: List all tags
+      tags:
+      - tags
+  /api/public/tags/{slug}:
+    get:
+      description: Get a single tag by its slug
+      parameters:
+      - description: Tag slug
+        in: path
+        name: slug
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get a tag by slug
       tags:
       - tags
   /api/public/tags/{slug}/posts:

@@ -155,10 +155,12 @@ func (r *Router) setupRoutes() {
 
 			// Categories
 			public.GET("/categories", r.publicCategoryHandler.ListCategories)
+			public.GET("/categories/:slug", r.publicCategoryHandler.GetCategory)
 			public.GET("/categories/:slug/posts", r.publicCategoryHandler.GetCategoryPosts)
 
 			// Tags
 			public.GET("/tags", r.publicTagHandler.ListTags)
+			public.GET("/tags/:slug", r.publicTagHandler.GetTag)
 			public.GET("/tags/:slug/posts", r.publicTagHandler.GetTagPosts)
 
 			// Projects

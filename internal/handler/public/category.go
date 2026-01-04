@@ -40,6 +40,31 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	handler.Success(c, mapper.ToCategoryResponses(categories))
 }
 
+// GetCategory godoc
+// @Summary Get a category by slug
+// @Description Get a single category by its slug
+// @Tags categories
+// @Produce json
+// @Param slug path string true "Category slug"
+// @Success 200 {object} handler.Response
+// @Failure 404 {object} handler.ErrorResponse
+// @Router /api/public/categories/{slug} [get]
+func (h *CategoryHandler) GetCategory(c *gin.Context) {
+	slug := c.Param("slug")
+
+	category, err := h.categoryService.GetCategoryBySlug(c.Request.Context(), slug)
+	if err != nil {
+		if errors.Is(err, domain.ErrCategoryNotFound) {
+			handler.NotFound(c, "Category not found")
+			return
+		}
+		handler.InternalError(c, "Failed to fetch category")
+		return
+	}
+
+	handler.Success(c, mapper.ToCategoryResponse(category))
+}
+
 // GetCategoryPosts godoc
 // @Summary Get posts by category
 // @Description Get a paginated list of posts in a category

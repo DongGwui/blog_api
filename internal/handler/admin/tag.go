@@ -48,7 +48,7 @@ func (h *TagHandler) ListTags(c *gin.Context) {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body model.CreateTagRequest true "Tag data"
+// @Param request body dto.CreateTagRequest true "Tag data"
 // @Success 201 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 409 {object} handler.ErrorResponse
@@ -82,7 +82,7 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Tag ID"
-// @Param request body model.UpdateTagRequest true "Tag data"
+// @Param request body dto.UpdateTagRequest true "Tag data"
 // @Success 200 {object} handler.Response
 // @Failure 400 {object} handler.ErrorResponse
 // @Failure 404 {object} handler.ErrorResponse
