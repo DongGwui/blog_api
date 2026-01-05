@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ydonggwui/blog-api/internal/pkg/logger"
 )
 
 // Response formats
@@ -80,6 +81,18 @@ func Conflict(c *gin.Context, message string) {
 }
 
 func InternalError(c *gin.Context, message string) {
+	c.JSON(http.StatusInternalServerError, ErrorResponse{
+		Error: ErrorDetail{Code: "INTERNAL_ERROR", Message: message},
+	})
+}
+
+// InternalErrorWithLog logs the error details and returns 500 response
+func InternalErrorWithLog(c *gin.Context, message string, err error) {
+	logger.Error(c.Request.Context(), message,
+		"error", err.Error(),
+		"method", c.Request.Method,
+		"path", c.Request.URL.Path,
+	)
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
 		Error: ErrorDetail{Code: "INTERNAL_ERROR", Message: message},
 	})

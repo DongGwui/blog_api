@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/sqlc-dev/pqtype"
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
@@ -29,7 +30,7 @@ func (r *projectRepository) FindByID(ctx context.Context, id int32) (*entity.Pro
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrProjectNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("projectRepository.FindByID: %w", err)
 	}
 	return toProjectEntity(&project), nil
 }
@@ -40,7 +41,7 @@ func (r *projectRepository) FindBySlug(ctx context.Context, slug string) (*entit
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrProjectNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("projectRepository.FindBySlug: %w", err)
 	}
 	return toProjectEntity(&project), nil
 }
@@ -49,7 +50,7 @@ func (r *projectRepository) Create(ctx context.Context, project *entity.Project)
 	params := toCreateProjectParams(project)
 	created, err := r.queries.CreateProject(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projectRepository.Create: %w", err)
 	}
 	return toProjectEntity(&created), nil
 }
@@ -61,7 +62,7 @@ func (r *projectRepository) Update(ctx context.Context, project *entity.Project)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrProjectNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("projectRepository.Update: %w", err)
 	}
 	return toProjectEntity(&updated), nil
 }
@@ -72,7 +73,7 @@ func (r *projectRepository) Delete(ctx context.Context, id int32) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.ErrProjectNotFound
 		}
-		return err
+		return fmt.Errorf("projectRepository.Delete: %w", err)
 	}
 	return nil
 }
@@ -82,7 +83,7 @@ func (r *projectRepository) Delete(ctx context.Context, id int32) error {
 func (r *projectRepository) ListAll(ctx context.Context) ([]entity.Project, error) {
 	projects, err := r.queries.ListProjects(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projectRepository.ListAll: %w", err)
 	}
 	return toProjectEntities(projects), nil
 }
@@ -90,7 +91,7 @@ func (r *projectRepository) ListAll(ctx context.Context) ([]entity.Project, erro
 func (r *projectRepository) ListFeatured(ctx context.Context) ([]entity.Project, error) {
 	projects, err := r.queries.ListFeaturedProjects(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projectRepository.ListFeatured: %w", err)
 	}
 	return toProjectEntities(projects), nil
 }
@@ -103,7 +104,7 @@ func (r *projectRepository) SlugExists(ctx context.Context, slug string) (bool, 
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("projectRepository.SlugExists: %w", err)
 	}
 	return true, nil
 }
@@ -114,7 +115,7 @@ func (r *projectRepository) SlugExistsExcept(ctx context.Context, slug string, e
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("projectRepository.SlugExistsExcept: %w", err)
 	}
 	return project.ID != excludeID, nil
 }
@@ -122,10 +123,13 @@ func (r *projectRepository) SlugExistsExcept(ctx context.Context, slug string, e
 // Reorder
 
 func (r *projectRepository) UpdateOrder(ctx context.Context, id int32, sortOrder int32) error {
-	return r.queries.UpdateProjectOrder(ctx, sqlc.UpdateProjectOrderParams{
+	if err := r.queries.UpdateProjectOrder(ctx, sqlc.UpdateProjectOrderParams{
 		ID:        id,
 		SortOrder: sql.NullInt32{Int32: sortOrder, Valid: true},
-	})
+	}); err != nil {
+		return fmt.Errorf("projectRepository.UpdateOrder: %w", err)
+	}
+	return nil
 }
 
 // Mapper functions

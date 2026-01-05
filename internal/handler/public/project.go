@@ -34,7 +34,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 	if c.Query("featured") == "true" {
 		projects, err := h.projectService.ListFeaturedProjects(c.Request.Context())
 		if err != nil {
-			handler.InternalError(c, "Failed to fetch projects")
+			handler.InternalErrorWithLog(c, "Failed to fetch projects", err)
 			return
 		}
 		handler.Success(c, mapper.ToProjectListResponses(projects))
@@ -43,7 +43,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 
 	projects, err := h.projectService.ListProjects(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch projects")
+		handler.InternalErrorWithLog(c, "Failed to fetch projects", err)
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch project")
+		handler.InternalErrorWithLog(c, "Failed to fetch project", err)
 		return
 	}
 

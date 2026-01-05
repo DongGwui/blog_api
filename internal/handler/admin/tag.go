@@ -34,7 +34,7 @@ func NewTagHandlerWithCleanArch(tagService domainService.TagService) *TagHandler
 func (h *TagHandler) ListTags(c *gin.Context) {
 	tags, err := h.tagService.ListTags(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch tags")
+		handler.InternalErrorWithLog(c, "Failed to fetch tags", err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (h *TagHandler) GetTag(c *gin.Context) {
 			handler.NotFound(c, "Tag not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch tag")
+		handler.InternalErrorWithLog(c, "Failed to fetch tag", err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 			handler.Conflict(c, "Tag slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to create tag")
+		handler.InternalErrorWithLog(c, "Failed to create tag", err)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 			handler.Conflict(c, "Tag slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to update tag")
+		handler.InternalErrorWithLog(c, "Failed to update tag", err)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *TagHandler) DeleteTag(c *gin.Context) {
 			handler.NotFound(c, "Tag not found")
 			return
 		}
-		handler.InternalError(c, "Failed to delete tag")
+		handler.InternalErrorWithLog(c, "Failed to delete tag", err)
 		return
 	}
 

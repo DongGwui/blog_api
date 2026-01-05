@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/domain"
@@ -25,7 +26,7 @@ func NewCategoryRepository(queries *sqlc.Queries) repository.CategoryRepository 
 func (r *categoryRepository) FindAll(ctx context.Context) ([]entity.Category, error) {
 	categories, err := r.queries.ListCategories(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("categoryRepository.FindAll: %w", err)
 	}
 
 	result := toCategoryEntities(categories)
@@ -45,7 +46,7 @@ func (r *categoryRepository) FindByID(ctx context.Context, id int32) (*entity.Ca
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrCategoryNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("categoryRepository.FindByID: %w", err)
 	}
 
 	result := toCategoryEntity(category)
@@ -60,7 +61,7 @@ func (r *categoryRepository) FindBySlug(ctx context.Context, slug string) (*enti
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrCategoryNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("categoryRepository.FindBySlug: %w", err)
 	}
 
 	result := toCategoryEntity(category)
@@ -73,7 +74,7 @@ func (r *categoryRepository) Create(ctx context.Context, category *entity.Catego
 	params := toCreateCategoryParams(category)
 	created, err := r.queries.CreateCategory(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("categoryRepository.Create: %w", err)
 	}
 
 	return toCategoryEntity(created), nil
@@ -83,7 +84,7 @@ func (r *categoryRepository) Update(ctx context.Context, category *entity.Catego
 	params := toUpdateCategoryParams(category)
 	updated, err := r.queries.UpdateCategory(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("categoryRepository.Update: %w", err)
 	}
 
 	result := toCategoryEntity(updated)
@@ -93,7 +94,10 @@ func (r *categoryRepository) Update(ctx context.Context, category *entity.Catego
 }
 
 func (r *categoryRepository) Delete(ctx context.Context, id int32) error {
-	return r.queries.DeleteCategory(ctx, id)
+	if err := r.queries.DeleteCategory(ctx, id); err != nil {
+		return fmt.Errorf("categoryRepository.Delete: %w", err)
+	}
+	return nil
 }
 
 func (r *categoryRepository) SlugExists(ctx context.Context, slug string) (bool, error) {
@@ -102,7 +106,7 @@ func (r *categoryRepository) SlugExists(ctx context.Context, slug string) (bool,
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("categoryRepository.SlugExists: %w", err)
 	}
 	return true, nil
 }
@@ -113,7 +117,7 @@ func (r *categoryRepository) SlugExistsExcept(ctx context.Context, slug string, 
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("categoryRepository.SlugExistsExcept: %w", err)
 	}
 	// Slug exists but it's the same category
 	if category.ID == excludeID {
@@ -123,5 +127,9 @@ func (r *categoryRepository) SlugExistsExcept(ctx context.Context, slug string, 
 }
 
 func (r *categoryRepository) GetPostCount(ctx context.Context, id int32) (int64, error) {
-	return r.queries.GetCategoryPostCount(ctx, sql.NullInt32{Int32: id, Valid: true})
+	count, err := r.queries.GetCategoryPostCount(ctx, sql.NullInt32{Int32: id, Valid: true})
+	if err != nil {
+		return 0, fmt.Errorf("categoryRepository.GetPostCount: %w", err)
+	}
+	return count, nil
 }

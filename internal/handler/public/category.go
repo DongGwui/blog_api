@@ -33,7 +33,7 @@ func NewCategoryHandlerWithCleanArch(categoryService domainService.CategoryServi
 func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	categories, err := h.categoryService.ListCategories(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch categories")
+		handler.InternalErrorWithLog(c, "Failed to fetch categories", err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *CategoryHandler) GetCategoryPosts(c *gin.Context) {
 			handler.NotFound(c, "Category not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch category")
+		handler.InternalErrorWithLog(c, "Failed to fetch category", err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *CategoryHandler) GetCategoryPosts(c *gin.Context) {
 		int32(pagination.Offset),
 	)
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch posts")
+		handler.InternalErrorWithLog(c, "Failed to fetch posts", err)
 		return
 	}
 

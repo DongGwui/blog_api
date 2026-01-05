@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/domain"
 	"github.com/ydonggwui/blog-api/internal/domain/entity"
@@ -21,21 +22,37 @@ func NewProjectService(projectRepo repository.ProjectRepository) domainService.P
 // Public API
 
 func (s *projectService) ListProjects(ctx context.Context) ([]entity.Project, error) {
-	return s.projectRepo.ListAll(ctx)
+	projects, err := s.projectRepo.ListAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("projectService.ListProjects: %w", err)
+	}
+	return projects, nil
 }
 
 func (s *projectService) ListFeaturedProjects(ctx context.Context) ([]entity.Project, error) {
-	return s.projectRepo.ListFeatured(ctx)
+	projects, err := s.projectRepo.ListFeatured(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("projectService.ListFeaturedProjects: %w", err)
+	}
+	return projects, nil
 }
 
 func (s *projectService) GetProjectBySlug(ctx context.Context, slug string) (*entity.Project, error) {
-	return s.projectRepo.FindBySlug(ctx, slug)
+	project, err := s.projectRepo.FindBySlug(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("projectService.GetProjectBySlug: %w", err)
+	}
+	return project, nil
 }
 
 // Admin API
 
 func (s *projectService) GetProject(ctx context.Context, id int32) (*entity.Project, error) {
-	return s.projectRepo.FindByID(ctx, id)
+	project, err := s.projectRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("projectService.GetProject: %w", err)
+	}
+	return project, nil
 }
 
 func (s *projectService) CreateProject(ctx context.Context, cmd domainService.CreateProjectCommand) (*entity.Project, error) {
@@ -49,7 +66,7 @@ func (s *projectService) CreateProject(ctx context.Context, cmd domainService.Cr
 	// Check if slug exists
 	exists, err := s.projectRepo.SlugExists(ctx, slug)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projectService.CreateProject: slug check failed: %w", err)
 	}
 	if exists {
 		return nil, domain.ErrProjectSlugExists
@@ -70,14 +87,18 @@ func (s *projectService) CreateProject(ctx context.Context, cmd domainService.Cr
 		SortOrder:   cmd.SortOrder,
 	}
 
-	return s.projectRepo.Create(ctx, project)
+	created, err := s.projectRepo.Create(ctx, project)
+	if err != nil {
+		return nil, fmt.Errorf("projectService.CreateProject: create failed: %w", err)
+	}
+	return created, nil
 }
 
 func (s *projectService) UpdateProject(ctx context.Context, id int32, cmd domainService.UpdateProjectCommand) (*entity.Project, error) {
 	// Get existing project
 	existing, err := s.projectRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("projectService.UpdateProject: find project failed: %w", err)
 	}
 
 	// Update fields if provided
@@ -91,7 +112,7 @@ func (s *projectService) UpdateProject(ctx context.Context, id int32, cmd domain
 			// Check if new slug exists
 			exists, err := s.projectRepo.SlugExistsExcept(ctx, newSlug, id)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("projectService.UpdateProject: slug check failed: %w", err)
 			}
 			if exists {
 				return nil, domain.ErrProjectSlugExists
@@ -130,23 +151,30 @@ func (s *projectService) UpdateProject(ctx context.Context, id int32, cmd domain
 		existing.Images = cmd.Images
 	}
 
-	return s.projectRepo.Update(ctx, existing)
+	updated, err := s.projectRepo.Update(ctx, existing)
+	if err != nil {
+		return nil, fmt.Errorf("projectService.UpdateProject: update failed: %w", err)
+	}
+	return updated, nil
 }
 
 func (s *projectService) DeleteProject(ctx context.Context, id int32) error {
 	// Check if project exists
 	_, err := s.projectRepo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("projectService.DeleteProject: find project failed: %w", err)
 	}
 
-	return s.projectRepo.Delete(ctx, id)
+	if err := s.projectRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("projectService.DeleteProject: delete failed: %w", err)
+	}
+	return nil
 }
 
 func (s *projectService) ReorderProjects(ctx context.Context, orders []entity.ProjectOrder) error {
 	for _, order := range orders {
 		if err := s.projectRepo.UpdateOrder(ctx, order.ID, order.SortOrder); err != nil {
-			return err
+			return fmt.Errorf("projectService.ReorderProjects: update order failed for id %d: %w", order.ID, err)
 		}
 	}
 	return nil

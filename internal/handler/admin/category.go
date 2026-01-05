@@ -34,7 +34,7 @@ func NewCategoryHandlerWithCleanArch(categoryService domainService.CategoryServi
 func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	categories, err := h.categoryService.ListCategories(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch categories")
+		handler.InternalErrorWithLog(c, "Failed to fetch categories", err)
 		return
 	}
 	handler.Success(c, mapper.ToCategoryResponses(categories))
@@ -63,7 +63,7 @@ func (h *CategoryHandler) GetCategory(c *gin.Context) {
 			handler.NotFound(c, "Category not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch category")
+		handler.InternalErrorWithLog(c, "Failed to fetch category", err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 			handler.Conflict(c, "Category slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to create category")
+		handler.InternalErrorWithLog(c, "Failed to create category", err)
 		return
 	}
 
@@ -141,7 +141,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 			handler.Conflict(c, "Category slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to update category")
+		handler.InternalErrorWithLog(c, "Failed to update category", err)
 		return
 	}
 
@@ -174,7 +174,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 			handler.BadRequest(c, "Cannot delete category with posts")
 			return
 		}
-		handler.InternalError(c, "Failed to delete category")
+		handler.InternalErrorWithLog(c, "Failed to delete category", err)
 		return
 	}
 

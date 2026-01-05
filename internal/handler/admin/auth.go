@@ -50,7 +50,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			handler.Unauthorized(c, "Invalid username or password")
 			return
 		}
-		handler.InternalError(c, "Login failed")
+		handler.InternalErrorWithLog(c, "Login failed", err)
 		return
 	}
 
@@ -110,7 +110,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 			handler.NotFound(c, "Admin not found")
 			return
 		}
-		handler.InternalError(c, "Failed to get admin info")
+		handler.InternalErrorWithLog(c, "Failed to get admin info", err)
 		return
 	}
 

@@ -35,7 +35,7 @@ func (s *viewService) RecordView(ctx context.Context, postID int32, clientIP str
 	// Try to set the key with NX (only if not exists) and TTL
 	isNew, err := s.viewRepo.SetViewIfNotExists(ctx, key, viewTTL)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("viewService.RecordView: set view failed: %w", err)
 	}
 
 	// If the key was set (new view), increment the view count in DB
@@ -52,7 +52,11 @@ func (s *viewService) RecordView(ctx context.Context, postID int32, clientIP str
 
 func (s *viewService) HasViewed(ctx context.Context, postID int32, clientIP string) (bool, error) {
 	key := s.createViewKey(postID, clientIP)
-	return s.viewRepo.HasView(ctx, key)
+	hasViewed, err := s.viewRepo.HasView(ctx, key)
+	if err != nil {
+		return false, fmt.Errorf("viewService.HasViewed: %w", err)
+	}
+	return hasViewed, nil
 }
 
 // createViewKey creates a Redis key for view tracking

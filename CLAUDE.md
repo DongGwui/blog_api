@@ -19,13 +19,16 @@
 blog_api/
 ├── cmd/server/          # 애플리케이션 진입점
 ├── internal/
+│   ├── application/     # 비즈니스 로직 (서비스 계층)
 │   ├── config/          # 설정 관리
 │   ├── database/        # DB 연결 및 sqlc 생성 코드
+│   ├── domain/          # 도메인 모델, 인터페이스, 에러
 │   ├── handler/         # HTTP 핸들러 (admin/, public/)
+│   ├── infrastructure/  # 외부 시스템 연동 (postgres, redis, minio)
+│   ├── interfaces/      # DTO, Mapper
 │   ├── middleware/      # 미들웨어 (auth, cors, logger)
-│   ├── model/           # 요청/응답 모델
+│   ├── pkg/logger/      # 구조화된 로깅 (slog)
 │   ├── router/          # 라우터 설정
-│   ├── service/         # 비즈니스 로직
 │   └── util/            # 유틸리티 함수
 ├── migrations/          # DB 마이그레이션
 ├── docker/postgres/     # PostgreSQL + pg_bigm Dockerfile
@@ -68,6 +71,33 @@ swag init -g cmd/server/main.go -o docs/swagger
 - `MINIO_SECRET_KEY` - MinIO 비밀번호 (8자 이상)
 - `JWT_SECRET` - JWT 서명 키 (32자 이상)
 - `ADMIN_PASSWORD` - 초기 관리자 비밀번호
+
+## 로깅 및 에러 처리
+
+### 로깅 시스템
+- **라이브러리**: Go 1.21+ 표준 `log/slog`
+- **포맷**: JSON (Docker 로그에서 `jq`로 파싱 가능)
+- **위치**: `internal/pkg/logger/`
+
+### 에러 래핑 패턴
+모든 계층에서 `fmt.Errorf("functionName: %w", err)` 패턴으로 에러 래핑:
+
+```go
+// Repository
+return nil, fmt.Errorf("postRepository.FindByID: %w", err)
+
+// Service
+return nil, fmt.Errorf("postService.CreatePost: %w", err)
+```
+
+### 에러 로그 확인
+```bash
+# 모든 에러 로그
+docker logs blog-api 2>&1 | jq 'select(.level == "ERROR")'
+
+# 특정 request_id 추적
+docker logs blog-api 2>&1 | jq 'select(.request_id == "abc-123-def")'
+```
 
 ## 참고 문서
 

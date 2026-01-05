@@ -29,7 +29,7 @@ func NewDashboardHandlerWithCleanArch(dashboardService domainService.DashboardSe
 func (h *DashboardHandler) GetStats(c *gin.Context) {
 	stats, err := h.dashboardService.GetStats(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch dashboard stats")
+		handler.InternalErrorWithLog(c, "Failed to fetch dashboard stats", err)
 		return
 	}
 

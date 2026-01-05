@@ -8,6 +8,7 @@ import (
 	"github.com/ydonggwui/blog-api/internal/config"
 	"github.com/ydonggwui/blog-api/internal/database"
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
+	"github.com/ydonggwui/blog-api/internal/pkg/logger"
 	"github.com/ydonggwui/blog-api/internal/router"
 
 	// Clean Architecture imports
@@ -35,6 +36,9 @@ import (
 // @description Bearer 토큰을 입력하세요 (예: Bearer eyJhbGc...)
 
 func main() {
+	// Initialize logger
+	logger.Init()
+
 	// Load configuration
 	cfg := config.Load()
 

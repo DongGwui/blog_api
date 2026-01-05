@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/domain"
@@ -25,7 +26,7 @@ func (r *adminRepository) FindByID(ctx context.Context, id int32) (*entity.Admin
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAdminNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("adminRepository.FindByID: %w", err)
 	}
 	return toAdminEntity(admin), nil
 }
@@ -36,7 +37,7 @@ func (r *adminRepository) FindByUsername(ctx context.Context, username string) (
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAdminNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("adminRepository.FindByUsername: %w", err)
 	}
 	return toAdminEntity(admin), nil
 }
@@ -47,14 +48,17 @@ func (r *adminRepository) Create(ctx context.Context, admin *entity.Admin) (*ent
 		Password: admin.Password,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("adminRepository.Create: %w", err)
 	}
 	return toAdminEntity(created), nil
 }
 
 func (r *adminRepository) UpdatePassword(ctx context.Context, id int32, hashedPassword string) error {
-	return r.queries.UpdateAdminPassword(ctx, sqlc.UpdateAdminPasswordParams{
+	if err := r.queries.UpdateAdminPassword(ctx, sqlc.UpdateAdminPasswordParams{
 		ID:       id,
 		Password: hashedPassword,
-	})
+	}); err != nil {
+		return fmt.Errorf("adminRepository.UpdatePassword: %w", err)
+	}
+	return nil
 }

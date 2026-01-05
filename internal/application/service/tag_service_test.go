@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -87,7 +88,7 @@ func TestTagService_GetTagByID(t *testing.T) {
 
 	t.Run("non-existing tag", func(t *testing.T) {
 		_, err := svc.GetTagByID(context.Background(), 999)
-		if err != domain.ErrTagNotFound {
+		if !errors.Is(err, domain.ErrTagNotFound) {
 			t.Errorf("expected ErrTagNotFound, got %v", err)
 		}
 	})
@@ -140,7 +141,7 @@ func TestTagService_CreateTag(t *testing.T) {
 			Slug: "go",
 		}
 		_, err := svc.CreateTag(context.Background(), cmd)
-		if err != domain.ErrTagSlugExists {
+		if !errors.Is(err, domain.ErrTagSlugExists) {
 			t.Errorf("expected ErrTagSlugExists, got %v", err)
 		}
 	})
@@ -191,7 +192,7 @@ func TestTagService_UpdateTag(t *testing.T) {
 			Slug: "golang",
 		}
 		_, err := svc.UpdateTag(context.Background(), 999, cmd)
-		if err != domain.ErrTagNotFound {
+		if !errors.Is(err, domain.ErrTagNotFound) {
 			t.Errorf("expected ErrTagNotFound, got %v", err)
 		}
 	})
@@ -228,7 +229,7 @@ func TestTagService_DeleteTag(t *testing.T) {
 
 	t.Run("tag not found", func(t *testing.T) {
 		err := svc.DeleteTag(context.Background(), 999)
-		if err != domain.ErrTagNotFound {
+		if !errors.Is(err, domain.ErrTagNotFound) {
 			t.Errorf("expected ErrTagNotFound, got %v", err)
 		}
 	})

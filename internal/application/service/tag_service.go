@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/domain"
 	"github.com/ydonggwui/blog-api/internal/domain/entity"
@@ -22,19 +23,35 @@ func NewTagService(tagRepo repository.TagRepository) domainService.TagService {
 }
 
 func (s *tagService) ListTags(ctx context.Context) ([]entity.Tag, error) {
-	return s.tagRepo.FindAll(ctx)
+	tags, err := s.tagRepo.FindAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tagService.ListTags: %w", err)
+	}
+	return tags, nil
 }
 
 func (s *tagService) ListTagsWithPostCount(ctx context.Context) ([]entity.Tag, error) {
-	return s.tagRepo.FindAllWithPostCount(ctx)
+	tags, err := s.tagRepo.FindAllWithPostCount(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tagService.ListTagsWithPostCount: %w", err)
+	}
+	return tags, nil
 }
 
 func (s *tagService) GetTagByID(ctx context.Context, id int32) (*entity.Tag, error) {
-	return s.tagRepo.FindByID(ctx, id)
+	tag, err := s.tagRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("tagService.GetTagByID: %w", err)
+	}
+	return tag, nil
 }
 
 func (s *tagService) GetTagBySlug(ctx context.Context, slug string) (*entity.Tag, error) {
-	return s.tagRepo.FindBySlug(ctx, slug)
+	tag, err := s.tagRepo.FindBySlug(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("tagService.GetTagBySlug: %w", err)
+	}
+	return tag, nil
 }
 
 func (s *tagService) CreateTag(ctx context.Context, cmd domainService.CreateTagCommand) (*entity.Tag, error) {
@@ -47,7 +64,7 @@ func (s *tagService) CreateTag(ctx context.Context, cmd domainService.CreateTagC
 	// Check if slug exists
 	exists, err := s.tagRepo.SlugExists(ctx, slug)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagService.CreateTag: slug check failed: %w", err)
 	}
 	if exists {
 		return nil, domain.ErrTagSlugExists
@@ -57,17 +74,21 @@ func (s *tagService) CreateTag(ctx context.Context, cmd domainService.CreateTagC
 
 	created, err := s.tagRepo.Create(ctx, tag)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagService.CreateTag: create failed: %w", err)
 	}
 
-	return s.tagRepo.FindByID(ctx, created.ID)
+	result, err := s.tagRepo.FindByID(ctx, created.ID)
+	if err != nil {
+		return nil, fmt.Errorf("tagService.CreateTag: fetch result failed: %w", err)
+	}
+	return result, nil
 }
 
 func (s *tagService) UpdateTag(ctx context.Context, id int32, cmd domainService.UpdateTagCommand) (*entity.Tag, error) {
 	// Check if tag exists
 	existing, err := s.tagRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagService.UpdateTag: find tag failed: %w", err)
 	}
 
 	// Generate slug if not provided
@@ -80,7 +101,7 @@ func (s *tagService) UpdateTag(ctx context.Context, id int32, cmd domainService.
 	if slug != existing.Slug {
 		exists, err := s.tagRepo.SlugExistsExcept(ctx, slug, id)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("tagService.UpdateTag: slug check failed: %w", err)
 		}
 		if exists {
 			return nil, domain.ErrTagSlugExists
@@ -95,18 +116,25 @@ func (s *tagService) UpdateTag(ctx context.Context, id int32, cmd domainService.
 
 	_, err = s.tagRepo.Update(ctx, tag)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagService.UpdateTag: update failed: %w", err)
 	}
 
-	return s.tagRepo.FindByID(ctx, id)
+	result, err := s.tagRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("tagService.UpdateTag: fetch result failed: %w", err)
+	}
+	return result, nil
 }
 
 func (s *tagService) DeleteTag(ctx context.Context, id int32) error {
 	// Check if tag exists
 	_, err := s.tagRepo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("tagService.DeleteTag: find tag failed: %w", err)
 	}
 
-	return s.tagRepo.Delete(ctx, id)
+	if err := s.tagRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("tagService.DeleteTag: delete failed: %w", err)
+	}
+	return nil
 }

@@ -41,7 +41,7 @@ func (h *MediaHandler) ListMedia(c *gin.Context) {
 		int32(pagination.Offset),
 	)
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch media")
+		handler.InternalErrorWithLog(c, "Failed to fetch media", err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (h *MediaHandler) UploadMedia(c *gin.Context) {
 			handler.Error(c, 413, "REQUEST_ENTITY_TOO_LARGE", "File too large. Maximum size is 10MB")
 			return
 		}
-		handler.InternalError(c, "Failed to upload file")
+		handler.InternalErrorWithLog(c, "Failed to upload file", err)
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *MediaHandler) DeleteMedia(c *gin.Context) {
 			handler.NotFound(c, "Media not found")
 			return
 		}
-		handler.InternalError(c, "Failed to delete media")
+		handler.InternalErrorWithLog(c, "Failed to delete media", err)
 		return
 	}
 

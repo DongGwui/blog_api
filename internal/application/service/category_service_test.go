@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -63,7 +64,7 @@ func TestCategoryService_GetCategoryByID(t *testing.T) {
 
 	t.Run("non-existing category", func(t *testing.T) {
 		_, err := svc.GetCategoryByID(context.Background(), 999)
-		if err != domain.ErrCategoryNotFound {
+		if !errors.Is(err, domain.ErrCategoryNotFound) {
 			t.Errorf("expected ErrCategoryNotFound, got %v", err)
 		}
 	})
@@ -167,7 +168,7 @@ func TestCategoryService_UpdateCategory(t *testing.T) {
 			Slug: "technology",
 		}
 		_, err := svc.UpdateCategory(context.Background(), 999, cmd)
-		if err != domain.ErrCategoryNotFound {
+		if !errors.Is(err, domain.ErrCategoryNotFound) {
 			t.Errorf("expected ErrCategoryNotFound, got %v", err)
 		}
 	})
@@ -207,7 +208,7 @@ func TestCategoryService_DeleteCategory(t *testing.T) {
 
 	t.Run("category not found", func(t *testing.T) {
 		err := svc.DeleteCategory(context.Background(), 999)
-		if err != domain.ErrCategoryNotFound {
+		if !errors.Is(err, domain.ErrCategoryNotFound) {
 			t.Errorf("expected ErrCategoryNotFound, got %v", err)
 		}
 	})
@@ -217,7 +218,7 @@ func TestCategoryService_DeleteCategory(t *testing.T) {
 			return 5, nil
 		}
 		err := svc.DeleteCategory(context.Background(), 1)
-		if err != domain.ErrCategoryHasPosts {
+		if !errors.Is(err, domain.ErrCategoryHasPosts) {
 			t.Errorf("expected ErrCategoryHasPosts, got %v", err)
 		}
 	})

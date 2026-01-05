@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/domain"
@@ -25,7 +26,7 @@ func NewTagRepository(queries *sqlc.Queries) repository.TagRepository {
 func (r *tagRepository) FindAll(ctx context.Context) ([]entity.Tag, error) {
 	tags, err := r.queries.ListTags(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagRepository.FindAll: %w", err)
 	}
 
 	result := toTagEntities(tags)
@@ -42,7 +43,7 @@ func (r *tagRepository) FindAll(ctx context.Context) ([]entity.Tag, error) {
 func (r *tagRepository) FindAllWithPostCount(ctx context.Context) ([]entity.Tag, error) {
 	tags, err := r.queries.ListTagsWithPostCount(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagRepository.FindAllWithPostCount: %w", err)
 	}
 
 	return toTagEntitiesWithPostCount(tags), nil
@@ -54,7 +55,7 @@ func (r *tagRepository) FindByID(ctx context.Context, id int32) (*entity.Tag, er
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrTagNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("tagRepository.FindByID: %w", err)
 	}
 
 	result := toTagEntity(tag)
@@ -69,7 +70,7 @@ func (r *tagRepository) FindBySlug(ctx context.Context, slug string) (*entity.Ta
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrTagNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("tagRepository.FindBySlug: %w", err)
 	}
 
 	result := toTagEntity(tag)
@@ -82,7 +83,7 @@ func (r *tagRepository) Create(ctx context.Context, tag *entity.Tag) (*entity.Ta
 	params := toCreateTagParams(tag)
 	created, err := r.queries.CreateTag(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagRepository.Create: %w", err)
 	}
 
 	return toTagEntity(created), nil
@@ -92,7 +93,7 @@ func (r *tagRepository) Update(ctx context.Context, tag *entity.Tag) (*entity.Ta
 	params := toUpdateTagParams(tag)
 	updated, err := r.queries.UpdateTag(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("tagRepository.Update: %w", err)
 	}
 
 	result := toTagEntity(updated)
@@ -102,7 +103,10 @@ func (r *tagRepository) Update(ctx context.Context, tag *entity.Tag) (*entity.Ta
 }
 
 func (r *tagRepository) Delete(ctx context.Context, id int32) error {
-	return r.queries.DeleteTag(ctx, id)
+	if err := r.queries.DeleteTag(ctx, id); err != nil {
+		return fmt.Errorf("tagRepository.Delete: %w", err)
+	}
+	return nil
 }
 
 func (r *tagRepository) SlugExists(ctx context.Context, slug string) (bool, error) {
@@ -111,7 +115,7 @@ func (r *tagRepository) SlugExists(ctx context.Context, slug string) (bool, erro
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("tagRepository.SlugExists: %w", err)
 	}
 	return true, nil
 }
@@ -122,7 +126,7 @@ func (r *tagRepository) SlugExistsExcept(ctx context.Context, slug string, exclu
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, nil
 		}
-		return false, err
+		return false, fmt.Errorf("tagRepository.SlugExistsExcept: %w", err)
 	}
 	// Slug exists but it's the same tag
 	if tag.ID == excludeID {
@@ -132,5 +136,9 @@ func (r *tagRepository) SlugExistsExcept(ctx context.Context, slug string, exclu
 }
 
 func (r *tagRepository) GetPostCount(ctx context.Context, id int32) (int64, error) {
-	return r.queries.GetTagPostCount(ctx, id)
+	count, err := r.queries.GetTagPostCount(ctx, id)
+	if err != nil {
+		return 0, fmt.Errorf("tagRepository.GetPostCount: %w", err)
+	}
+	return count, nil
 }

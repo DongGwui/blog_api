@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -40,7 +41,7 @@ func (s *authService) Login(ctx context.Context, cmd domainService.LoginCommand)
 		if errors.Is(err, domain.ErrAdminNotFound) {
 			return nil, domain.ErrInvalidCredentials
 		}
-		return nil, err
+		return nil, fmt.Errorf("authService.Login: find admin failed: %w", err)
 	}
 
 	if err := comparePassword(admin.Password, cmd.Password); err != nil {
@@ -49,7 +50,7 @@ func (s *authService) Login(ctx context.Context, cmd domainService.LoginCommand)
 
 	token, expiresAt, err := s.generateToken(admin.ID, admin.Username)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("authService.Login: generate token failed: %w", err)
 	}
 
 	return &entity.TokenInfo{
@@ -59,7 +60,11 @@ func (s *authService) Login(ctx context.Context, cmd domainService.LoginCommand)
 }
 
 func (s *authService) GetAdminByID(ctx context.Context, id int32) (*entity.Admin, error) {
-	return s.adminRepo.FindByID(ctx, id)
+	admin, err := s.adminRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("authService.GetAdminByID: %w", err)
+	}
+	return admin, nil
 }
 
 func (s *authService) ValidateToken(tokenString string) (*entity.Claims, error) {
@@ -73,11 +78,11 @@ func (s *authService) ValidateToken(tokenString string) (*entity.Claims, error) 
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("authService.ValidateToken: parse token failed: %w", err)
 	}
 
 	if !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, fmt.Errorf("authService.ValidateToken: invalid token")
 	}
 
 	return &entity.Claims{
@@ -94,21 +99,24 @@ func (s *authService) EnsureAdminExists(ctx context.Context, username, password 
 	}
 
 	if !errors.Is(err, domain.ErrAdminNotFound) {
-		return err
+		return fmt.Errorf("authService.EnsureAdminExists: find admin failed: %w", err)
 	}
 
 	// Create initial admin
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
-		return err
+		return fmt.Errorf("authService.EnsureAdminExists: hash password failed: %w", err)
 	}
 
 	_, err = s.adminRepo.Create(ctx, &entity.Admin{
 		Username: username,
 		Password: hashedPassword,
 	})
+	if err != nil {
+		return fmt.Errorf("authService.EnsureAdminExists: create admin failed: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // generateToken creates a new JWT token
@@ -127,7 +135,7 @@ func (s *authService) generateToken(userID int32, username string) (string, time
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(s.jwtConfig.Secret))
 	if err != nil {
-		return "", time.Time{}, err
+		return "", time.Time{}, fmt.Errorf("generateToken: sign token failed: %w", err)
 	}
 
 	return tokenString, expiresAt, nil
@@ -137,7 +145,7 @@ func (s *authService) generateToken(userID int32, username string) (string, time
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("hashPassword: bcrypt failed: %w", err)
 	}
 	return string(bytes), nil
 }

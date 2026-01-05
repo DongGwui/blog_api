@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/domain"
@@ -25,7 +26,7 @@ func (r *mediaRepository) FindByID(ctx context.Context, id int32) (*entity.Media
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrMediaNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("mediaRepository.FindByID: %w", err)
 	}
 	return toMediaEntity(media), nil
 }
@@ -33,13 +34,16 @@ func (r *mediaRepository) FindByID(ctx context.Context, id int32) (*entity.Media
 func (r *mediaRepository) Create(ctx context.Context, media *entity.Media) (*entity.Media, error) {
 	created, err := r.queries.CreateMedia(ctx, toCreateMediaParams(media))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("mediaRepository.Create: %w", err)
 	}
 	return toMediaEntity(created), nil
 }
 
 func (r *mediaRepository) Delete(ctx context.Context, id int32) error {
-	return r.queries.DeleteMedia(ctx, id)
+	if err := r.queries.DeleteMedia(ctx, id); err != nil {
+		return fmt.Errorf("mediaRepository.Delete: %w", err)
+	}
+	return nil
 }
 
 func (r *mediaRepository) List(ctx context.Context, limit, offset int32) ([]entity.Media, error) {
@@ -48,11 +52,15 @@ func (r *mediaRepository) List(ctx context.Context, limit, offset int32) ([]enti
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("mediaRepository.List: %w", err)
 	}
 	return toMediaEntities(media), nil
 }
 
 func (r *mediaRepository) Count(ctx context.Context) (int64, error) {
-	return r.queries.CountMedia(ctx)
+	count, err := r.queries.CountMedia(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("mediaRepository.Count: %w", err)
+	}
+	return count, nil
 }

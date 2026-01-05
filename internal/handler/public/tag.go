@@ -33,7 +33,7 @@ func NewTagHandlerWithCleanArch(tagService domainService.TagService, postService
 func (h *TagHandler) ListTags(c *gin.Context) {
 	tags, err := h.tagService.ListTagsWithPostCount(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch tags")
+		handler.InternalErrorWithLog(c, "Failed to fetch tags", err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *TagHandler) GetTagPosts(c *gin.Context) {
 			handler.NotFound(c, "Tag not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch tag")
+		handler.InternalErrorWithLog(c, "Failed to fetch tag", err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *TagHandler) GetTagPosts(c *gin.Context) {
 		int32(pagination.Offset),
 	)
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch posts")
+		handler.InternalErrorWithLog(c, "Failed to fetch posts", err)
 		return
 	}
 

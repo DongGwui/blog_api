@@ -50,7 +50,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 				int32(pagination.Offset),
 			)
 			if err != nil {
-				handler.InternalError(c, "Failed to fetch posts")
+				handler.InternalErrorWithLog(c, "Failed to fetch posts", err)
 				return
 			}
 			handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
@@ -69,7 +69,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 				int32(pagination.Offset),
 			)
 			if err != nil {
-				handler.InternalError(c, "Failed to fetch posts")
+				handler.InternalErrorWithLog(c, "Failed to fetch posts", err)
 				return
 			}
 			handler.SuccessWithMeta(c, mapper.ToPostListResponses(posts), pagination.ToMeta(total))
@@ -84,7 +84,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 		int32(pagination.Offset),
 	)
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch posts")
+		handler.InternalErrorWithLog(c, "Failed to fetch posts", err)
 		return
 	}
 
@@ -109,7 +109,7 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch post")
+		handler.InternalErrorWithLog(c, "Failed to fetch post", err)
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *PostHandler) SearchPosts(c *gin.Context) {
 		int32(pagination.Offset),
 	)
 	if err != nil {
-		handler.InternalError(c, "Failed to search posts")
+		handler.InternalErrorWithLog(c, "Failed to search posts", err)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (h *PostHandler) RecordView(c *gin.Context) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
-		handler.InternalError(c, "Failed to find post")
+		handler.InternalErrorWithLog(c, "Failed to find post", err)
 		return
 	}
 

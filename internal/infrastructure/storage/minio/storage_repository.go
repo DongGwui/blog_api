@@ -27,11 +27,17 @@ func (r *storageRepository) Upload(ctx context.Context, path string, file io.Rea
 	_, err := r.client.PutObject(ctx, r.cfg.Bucket, path, file, size, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("storageRepository.Upload: %w", err)
+	}
+	return nil
 }
 
 func (r *storageRepository) Delete(ctx context.Context, path string) error {
-	return r.client.RemoveObject(ctx, r.cfg.Bucket, path, minio.RemoveObjectOptions{})
+	if err := r.client.RemoveObject(ctx, r.cfg.Bucket, path, minio.RemoveObjectOptions{}); err != nil {
+		return fmt.Errorf("storageRepository.Delete: %w", err)
+	}
+	return nil
 }
 
 func (r *storageRepository) GenerateURL(path string) string {

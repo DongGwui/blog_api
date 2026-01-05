@@ -59,7 +59,7 @@ func (h *PostHandler) ListPosts(c *gin.Context) {
 	}
 
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch posts")
+		handler.InternalErrorWithLog(c, "Failed to fetch posts", err)
 		return
 	}
 
@@ -89,7 +89,7 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch post")
+		handler.InternalErrorWithLog(c, "Failed to fetch post", err)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 			handler.Conflict(c, "Slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to create post")
+		handler.InternalErrorWithLog(c, "Failed to create post", err)
 		return
 	}
 
@@ -167,7 +167,7 @@ func (h *PostHandler) UpdatePost(c *gin.Context) {
 			handler.Conflict(c, "Slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to update post")
+		handler.InternalErrorWithLog(c, "Failed to update post", err)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *PostHandler) DeletePost(c *gin.Context) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
-		handler.InternalError(c, "Failed to delete post")
+		handler.InternalErrorWithLog(c, "Failed to delete post", err)
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *PostHandler) PublishPost(c *gin.Context) {
 			handler.NotFound(c, "Post not found")
 			return
 		}
-		handler.InternalError(c, "Failed to update publish status")
+		handler.InternalErrorWithLog(c, "Failed to update publish status", err)
 		return
 	}
 

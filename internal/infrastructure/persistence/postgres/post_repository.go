@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/domain"
@@ -27,12 +28,12 @@ func (r *postRepository) FindByID(ctx context.Context, id int32) (*entity.PostWi
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrPostNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("postRepository.FindByID: %w", err)
 	}
 
 	tags, err := r.getTags(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.FindByID: get tags failed: %w", err)
 	}
 
 	return toPostWithDetails(post, tags), nil
@@ -44,12 +45,12 @@ func (r *postRepository) FindBySlug(ctx context.Context, slug string) (*entity.P
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrPostNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("postRepository.FindBySlug: %w", err)
 	}
 
 	tags, err := r.getTags(ctx, post.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.FindBySlug: get tags failed: %w", err)
 	}
 
 	// Convert GetPostBySlugRow to GetPostByIDRow format
@@ -78,7 +79,7 @@ func (r *postRepository) FindBySlug(ctx context.Context, slug string) (*entity.P
 func (r *postRepository) Create(ctx context.Context, post *entity.Post) (*entity.Post, error) {
 	created, err := r.queries.CreatePost(ctx, toCreatePostParams(post))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.Create: %w", err)
 	}
 	return toPostEntity(created), nil
 }
@@ -89,7 +90,7 @@ func (r *postRepository) Update(ctx context.Context, post *entity.Post) (*entity
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrPostNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("postRepository.Update: %w", err)
 	}
 	return toPostEntity(updated), nil
 }
@@ -100,7 +101,7 @@ func (r *postRepository) Delete(ctx context.Context, id int32) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.ErrPostNotFound
 		}
-		return err
+		return fmt.Errorf("postRepository.Delete: %w", err)
 	}
 	return nil
 }
@@ -108,14 +109,22 @@ func (r *postRepository) Delete(ctx context.Context, id int32) error {
 // Slug validation
 
 func (r *postRepository) SlugExists(ctx context.Context, slug string) (bool, error) {
-	return r.queries.CheckSlugExists(ctx, slug)
+	exists, err := r.queries.CheckSlugExists(ctx, slug)
+	if err != nil {
+		return false, fmt.Errorf("postRepository.SlugExists: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *postRepository) SlugExistsExcept(ctx context.Context, slug string, excludeID int32) (bool, error) {
-	return r.queries.CheckSlugExistsExcept(ctx, sqlc.CheckSlugExistsExceptParams{
+	exists, err := r.queries.CheckSlugExistsExcept(ctx, sqlc.CheckSlugExistsExceptParams{
 		Slug: slug,
 		ID:   excludeID,
 	})
+	if err != nil {
+		return false, fmt.Errorf("postRepository.SlugExistsExcept: %w", err)
+	}
+	return exists, nil
 }
 
 // Published posts (public API)
@@ -126,12 +135,12 @@ func (r *postRepository) FindPublishedBySlug(ctx context.Context, slug string) (
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrPostNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("postRepository.FindPublishedBySlug: %w", err)
 	}
 
 	tags, err := r.getTags(ctx, post.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.FindPublishedBySlug: get tags failed: %w", err)
 	}
 
 	return toPostWithDetailsFromSlug(post, tags), nil
@@ -143,7 +152,7 @@ func (r *postRepository) ListPublished(ctx context.Context, limit, offset int32)
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.ListPublished: %w", err)
 	}
 
 	result := make([]entity.PostWithDetails, len(posts))
@@ -155,7 +164,11 @@ func (r *postRepository) ListPublished(ctx context.Context, limit, offset int32)
 }
 
 func (r *postRepository) CountPublished(ctx context.Context) (int64, error) {
-	return r.queries.CountPublishedPosts(ctx)
+	count, err := r.queries.CountPublishedPosts(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("postRepository.CountPublished: %w", err)
+	}
+	return count, nil
 }
 
 // Filter by category
@@ -167,7 +180,7 @@ func (r *postRepository) ListPublishedByCategory(ctx context.Context, categoryID
 		Offset:     offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.ListPublishedByCategory: %w", err)
 	}
 
 	result := make([]entity.PostWithDetails, len(posts))
@@ -179,7 +192,11 @@ func (r *postRepository) ListPublishedByCategory(ctx context.Context, categoryID
 }
 
 func (r *postRepository) CountPublishedByCategory(ctx context.Context, categoryID int32) (int64, error) {
-	return r.queries.CountPublishedPostsByCategory(ctx, sql.NullInt32{Int32: categoryID, Valid: true})
+	count, err := r.queries.CountPublishedPostsByCategory(ctx, sql.NullInt32{Int32: categoryID, Valid: true})
+	if err != nil {
+		return 0, fmt.Errorf("postRepository.CountPublishedByCategory: %w", err)
+	}
+	return count, nil
 }
 
 // Filter by tag
@@ -191,7 +208,7 @@ func (r *postRepository) ListPublishedByTag(ctx context.Context, tagID int32, li
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.ListPublishedByTag: %w", err)
 	}
 
 	result := make([]entity.PostWithDetails, len(posts))
@@ -203,7 +220,11 @@ func (r *postRepository) ListPublishedByTag(ctx context.Context, tagID int32, li
 }
 
 func (r *postRepository) CountPublishedByTag(ctx context.Context, tagID int32) (int64, error) {
-	return r.queries.CountPublishedPostsByTag(ctx, tagID)
+	count, err := r.queries.CountPublishedPostsByTag(ctx, tagID)
+	if err != nil {
+		return 0, fmt.Errorf("postRepository.CountPublishedByTag: %w", err)
+	}
+	return count, nil
 }
 
 // Search
@@ -216,7 +237,7 @@ func (r *postRepository) SearchPublished(ctx context.Context, query string, limi
 		Offset:  offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.SearchPublished: %w", err)
 	}
 
 	result := make([]entity.PostWithDetails, len(posts))
@@ -229,7 +250,11 @@ func (r *postRepository) SearchPublished(ctx context.Context, query string, limi
 
 func (r *postRepository) CountSearchPublished(ctx context.Context, query string) (int64, error) {
 	queryParam := sql.NullString{String: query, Valid: query != ""}
-	return r.queries.CountSearchPublishedPosts(ctx, queryParam)
+	count, err := r.queries.CountSearchPublishedPosts(ctx, queryParam)
+	if err != nil {
+		return 0, fmt.Errorf("postRepository.CountSearchPublished: %w", err)
+	}
+	return count, nil
 }
 
 // Admin operations
@@ -240,7 +265,7 @@ func (r *postRepository) ListAll(ctx context.Context, limit, offset int32) ([]en
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.ListAll: %w", err)
 	}
 
 	result := make([]entity.PostWithDetails, len(posts))
@@ -252,7 +277,11 @@ func (r *postRepository) ListAll(ctx context.Context, limit, offset int32) ([]en
 }
 
 func (r *postRepository) CountAll(ctx context.Context) (int64, error) {
-	return r.queries.CountAllPosts(ctx)
+	count, err := r.queries.CountAllPosts(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("postRepository.CountAll: %w", err)
+	}
+	return count, nil
 }
 
 func (r *postRepository) ListByStatus(ctx context.Context, status entity.PostStatus, limit, offset int32) ([]entity.PostWithDetails, error) {
@@ -262,7 +291,7 @@ func (r *postRepository) ListByStatus(ctx context.Context, status entity.PostSta
 		Offset: offset,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("postRepository.ListByStatus: %w", err)
 	}
 
 	result := make([]entity.PostWithDetails, len(posts))
@@ -274,7 +303,11 @@ func (r *postRepository) ListByStatus(ctx context.Context, status entity.PostSta
 }
 
 func (r *postRepository) CountByStatus(ctx context.Context, status entity.PostStatus) (int64, error) {
-	return r.queries.CountPostsByStatus(ctx, sql.NullString{String: string(status), Valid: true})
+	count, err := r.queries.CountPostsByStatus(ctx, sql.NullString{String: string(status), Valid: true})
+	if err != nil {
+		return 0, fmt.Errorf("postRepository.CountByStatus: %w", err)
+	}
+	return count, nil
 }
 
 // Publish/Unpublish
@@ -285,7 +318,7 @@ func (r *postRepository) Publish(ctx context.Context, id int32) (*entity.Post, e
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrPostNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("postRepository.Publish: %w", err)
 	}
 	return toPostEntity(post), nil
 }
@@ -296,7 +329,7 @@ func (r *postRepository) Unpublish(ctx context.Context, id int32) (*entity.Post,
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrPostNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("postRepository.Unpublish: %w", err)
 	}
 	return toPostEntity(post), nil
 }
@@ -310,7 +343,7 @@ func (r *postRepository) GetTags(ctx context.Context, postID int32) ([]entity.Ta
 func (r *postRepository) SetTags(ctx context.Context, postID int32, tagIDs []int32) error {
 	// Remove existing tags
 	if err := r.queries.RemoveAllPostTags(ctx, postID); err != nil {
-		return err
+		return fmt.Errorf("postRepository.SetTags: remove existing tags failed: %w", err)
 	}
 
 	// Add new tags
@@ -319,20 +352,26 @@ func (r *postRepository) SetTags(ctx context.Context, postID int32, tagIDs []int
 			PostID: postID,
 			TagID:  tagID,
 		}); err != nil {
-			return err
+			return fmt.Errorf("postRepository.SetTags: add tag %d failed: %w", tagID, err)
 		}
 	}
 	return nil
 }
 
 func (r *postRepository) RemoveAllTags(ctx context.Context, postID int32) error {
-	return r.queries.RemoveAllPostTags(ctx, postID)
+	if err := r.queries.RemoveAllPostTags(ctx, postID); err != nil {
+		return fmt.Errorf("postRepository.RemoveAllTags: %w", err)
+	}
+	return nil
 }
 
 // View count
 
 func (r *postRepository) IncrementViewCount(ctx context.Context, id int32) error {
-	return r.queries.IncrementViewCount(ctx, id)
+	if err := r.queries.IncrementViewCount(ctx, id); err != nil {
+		return fmt.Errorf("postRepository.IncrementViewCount: %w", err)
+	}
+	return nil
 }
 
 // Helper methods

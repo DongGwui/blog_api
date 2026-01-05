@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/database/sqlc"
 	"github.com/ydonggwui/blog-api/internal/domain/entity"
@@ -20,17 +21,17 @@ func NewDashboardRepository(queries *sqlc.Queries) repository.DashboardRepositor
 func (r *dashboardRepository) GetPostStats(ctx context.Context) (*entity.PostStats, error) {
 	total, err := r.queries.CountAllPosts(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardRepository.GetPostStats: count total failed: %w", err)
 	}
 
 	published, err := r.queries.CountPostsByStatus(ctx, sql.NullString{String: "published", Valid: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardRepository.GetPostStats: count published failed: %w", err)
 	}
 
 	draft, err := r.queries.CountPostsByStatus(ctx, sql.NullString{String: "draft", Valid: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardRepository.GetPostStats: count draft failed: %w", err)
 	}
 
 	return &entity.PostStats{
@@ -43,7 +44,7 @@ func (r *dashboardRepository) GetPostStats(ctx context.Context) (*entity.PostSta
 func (r *dashboardRepository) GetCategoryStats(ctx context.Context) ([]entity.CategoryStats, error) {
 	categories, err := r.queries.ListCategories(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardRepository.GetCategoryStats: %w", err)
 	}
 
 	result := make([]entity.CategoryStats, len(categories))
@@ -66,7 +67,7 @@ func (r *dashboardRepository) GetRecentPosts(ctx context.Context, limit int32) (
 		Offset: 0,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardRepository.GetRecentPosts: %w", err)
 	}
 
 	result := make([]entity.RecentPost, len(posts))

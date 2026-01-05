@@ -68,20 +68,23 @@ func (s *categoryService) DeleteCategory(ctx context.Context, id int32) error {
     // 1. 존재 확인
     _, err := s.repo.FindByID(ctx, id)
     if err != nil {
-        return domain.ErrCategoryNotFound
+        return err  // 도메인 에러 또는 래핑된 에러 그대로 반환
     }
 
     // 2. 비즈니스 규칙: 게시물이 있으면 삭제 불가
     count, err := s.repo.GetPostCount(ctx, id)
     if err != nil {
-        return err
+        return fmt.Errorf("categoryService.DeleteCategory: %w", err)  // 에러 래핑
     }
     if count > 0 {
         return domain.ErrCategoryHasPosts
     }
 
     // 3. 삭제 실행
-    return s.repo.Delete(ctx, id)
+    if err := s.repo.Delete(ctx, id); err != nil {
+        return fmt.Errorf("categoryService.DeleteCategory: %w", err)  // 에러 래핑
+    }
+    return nil
 }
 ```
 
@@ -152,9 +155,48 @@ func TestCategoryService_CreateCategory(t *testing.T) {
 4. `domain/repository/mocks/` 에 Mock 추가
 5. 단위 테스트 작성
 
+## 에러 처리 패턴
+
+### 에러 래핑 규칙
+
+서비스 계층에서는 `fmt.Errorf("serviceName.FunctionName: %w", err)` 패턴으로 에러를 래핑합니다:
+
+```go
+func (s *postService) CreatePost(ctx context.Context, cmd *domainService.CreatePostCommand) (*entity.PostWithDetails, error) {
+    // 도메인 에러는 그대로 반환
+    if cmd.CategoryID != nil {
+        _, err := s.categoryRepo.FindByID(ctx, *cmd.CategoryID)
+        if err != nil {
+            return nil, err  // domain.ErrCategoryNotFound 등 그대로 전달
+        }
+    }
+
+    // 일반 에러는 래핑하여 반환
+    post, err := s.repo.Create(ctx, entity)
+    if err != nil {
+        return nil, fmt.Errorf("postService.CreatePost: %w", err)
+    }
+    return post, nil
+}
+```
+
+### 테스트에서 에러 비교
+
+래핑된 에러를 비교할 때는 `errors.Is()` 사용:
+
+```go
+// 잘못된 방법
+if err != domain.ErrPostNotFound { ... }
+
+// 올바른 방법
+if !errors.Is(err, domain.ErrPostNotFound) { ... }
+```
+
 ## 주의사항
 
 - HTTP 관련 코드 (gin.Context 등) 사용 금지
 - DB 관련 코드 (sql.DB, sqlc 등) 사용 금지
 - 도메인 에러 (`domain.ErrXxx`) 반환
+- **일반 에러는 `fmt.Errorf`로 래핑** (함수명 포함)
+- 에러 비교는 `errors.Is()` 사용
 - context.Context는 항상 첫 번째 인자

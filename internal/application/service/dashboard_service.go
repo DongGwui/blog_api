@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ydonggwui/blog-api/internal/domain/entity"
 	"github.com/ydonggwui/blog-api/internal/domain/repository"
@@ -22,19 +23,19 @@ func (s *dashboardService) GetStats(ctx context.Context) (*entity.DashboardStats
 	// Get post stats
 	postStats, err := s.dashboardRepo.GetPostStats(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardService.GetStats: get post stats failed: %w", err)
 	}
 
 	// Get category stats
 	categoryStats, err := s.dashboardRepo.GetCategoryStats(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardService.GetStats: get category stats failed: %w", err)
 	}
 
 	// Get recent posts (limit 5)
 	recentPosts, err := s.dashboardRepo.GetRecentPosts(ctx, 5)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dashboardService.GetStats: get recent posts failed: %w", err)
 	}
 
 	return &entity.DashboardStats{

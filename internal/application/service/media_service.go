@@ -58,19 +58,23 @@ func NewMediaService(mediaRepo repository.MediaRepository, storageRepo repositor
 func (s *mediaService) ListMedia(ctx context.Context, limit, offset int32) ([]entity.Media, int64, error) {
 	media, err := s.mediaRepo.List(ctx, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("mediaService.ListMedia: list failed: %w", err)
 	}
 
 	total, err := s.mediaRepo.Count(ctx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("mediaService.ListMedia: count failed: %w", err)
 	}
 
 	return media, total, nil
 }
 
 func (s *mediaService) GetMediaByID(ctx context.Context, id int32) (*entity.Media, error) {
-	return s.mediaRepo.FindByID(ctx, id)
+	media, err := s.mediaRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("mediaService.GetMediaByID: %w", err)
+	}
+	return media, nil
 }
 
 func (s *mediaService) UploadMedia(ctx context.Context, cmd domainService.UploadMediaCommand) (*entity.UploadedFile, error) {
@@ -93,11 +97,19 @@ func (s *mediaService) UploadMedia(ctx context.Context, cmd domainService.Upload
 
 	// Check if we should skip image processing
 	if skipProcessingTypes[cmd.MimeType] {
-		return s.uploadOriginal(ctx, cmd, baseFilename, pathPrefix)
+		result, err := s.uploadOriginal(ctx, cmd, baseFilename, pathPrefix)
+		if err != nil {
+			return nil, fmt.Errorf("mediaService.UploadMedia: %w", err)
+		}
+		return result, nil
 	}
 
 	// Process image (compress and generate thumbnails)
-	return s.uploadProcessed(ctx, cmd, baseFilename, pathPrefix)
+	result, err := s.uploadProcessed(ctx, cmd, baseFilename, pathPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("mediaService.UploadMedia: %w", err)
+	}
+	return result, nil
 }
 
 // uploadOriginal uploads the file without any processing (for GIF, SVG)
@@ -128,7 +140,7 @@ func (s *mediaService) uploadOriginal(ctx context.Context, cmd domainService.Upl
 	created, err := s.mediaRepo.Create(ctx, media)
 	if err != nil {
 		_ = s.storageRepo.Delete(ctx, path)
-		return nil, err
+		return nil, fmt.Errorf("uploadOriginal: create media record failed: %w", err)
 	}
 
 	return &entity.UploadedFile{
@@ -227,7 +239,7 @@ func (s *mediaService) uploadProcessed(ctx context.Context, cmd domainService.Up
 	created, err := s.mediaRepo.Create(ctx, media)
 	if err != nil {
 		s.cleanupFiles(ctx, uploadedPaths)
-		return nil, err
+		return nil, fmt.Errorf("uploadProcessed: create media record failed: %w", err)
 	}
 
 	return &entity.UploadedFile{
@@ -253,13 +265,13 @@ func (s *mediaService) DeleteMedia(ctx context.Context, id int32) error {
 	// Get media info
 	media, err := s.mediaRepo.FindByID(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("mediaService.DeleteMedia: find media failed: %w", err)
 	}
 
 	// Delete main file from storage
 	err = s.storageRepo.Delete(ctx, media.Path)
 	if err != nil {
-		return fmt.Errorf("failed to delete file from storage: %w", err)
+		return fmt.Errorf("mediaService.DeleteMedia: delete file from storage failed: %w", err)
 	}
 
 	// Delete thumbnails if they exist
@@ -277,7 +289,10 @@ func (s *mediaService) DeleteMedia(ctx context.Context, id int32) error {
 	}
 
 	// Delete from database
-	return s.mediaRepo.Delete(ctx, id)
+	if err := s.mediaRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("mediaService.DeleteMedia: delete record failed: %w", err)
+	}
+	return nil
 }
 
 // extractPathFromURL extracts the storage path from a full URL

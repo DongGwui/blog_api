@@ -46,8 +46,11 @@ package postgres
 import (
     "context"
     "database/sql"
+    "errors"
+    "fmt"
 
     "github.com/ydonggwui/blog-api/internal/database/sqlc"
+    "github.com/ydonggwui/blog-api/internal/domain"
     "github.com/ydonggwui/blog-api/internal/domain/entity"
     "github.com/ydonggwui/blog-api/internal/domain/repository"
 )
@@ -65,12 +68,12 @@ func NewCategoryRepository(queries *sqlc.Queries) repository.CategoryRepository 
 func (r *categoryRepository) FindByID(ctx context.Context, id int32) (*entity.Category, error) {
     row, err := r.queries.GetCategoryByID(ctx, id)
     if err != nil {
-        if err == sql.ErrNoRows {
-            return nil, nil // 또는 도메인 에러
+        if errors.Is(err, sql.ErrNoRows) {
+            return nil, domain.ErrCategoryNotFound  // 도메인 에러 반환
         }
-        return nil, err
+        return nil, fmt.Errorf("categoryRepository.FindByID: %w", err)  // 에러 래핑
     }
-    return categoryRowToEntity(row), nil
+    return toCategoryEntity(row), nil
 }
 ```
 
@@ -124,6 +127,7 @@ package redis
 
 import (
     "context"
+    "fmt"
     "time"
 
     "github.com/redis/go-redis/v9"
@@ -140,7 +144,11 @@ func NewViewRepository(client *redis.Client) repository.ViewRepository {
 
 // SetNX: 키가 없을 때만 설정 (중복 방지)
 func (r *viewRepository) SetViewIfNotExists(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-    return r.client.SetNX(ctx, key, "1", ttl).Result()
+    result, err := r.client.SetNX(ctx, key, "1", ttl).Result()
+    if err != nil {
+        return false, fmt.Errorf("viewRepository.SetViewIfNotExists: %w", err)  // 에러 래핑
+    }
+    return result, nil
 }
 ```
 
@@ -155,27 +163,31 @@ package minio
 
 import (
     "context"
-    "mime/multipart"
+    "fmt"
+    "io"
 
     "github.com/minio/minio-go/v7"
     "github.com/ydonggwui/blog-api/internal/config"
-    "github.com/ydonggwui/blog-api/internal/domain/entity"
     "github.com/ydonggwui/blog-api/internal/domain/repository"
 )
 
 type storageRepository struct {
     client *minio.Client
-    config *config.MinIOConfig
+    cfg    *config.MinIOConfig
 }
 
 func NewStorageRepository(client *minio.Client, cfg *config.MinIOConfig) repository.StorageRepository {
-    return &storageRepository{client: client, config: cfg}
+    return &storageRepository{client: client, cfg: cfg}
 }
 
-func (r *storageRepository) Upload(ctx context.Context, file *entity.UploadedFile, header *multipart.FileHeader) (string, error) {
-    // MinIO 업로드 로직
-    // ...
-    return url, nil
+func (r *storageRepository) Upload(ctx context.Context, path string, file io.Reader, size int64, contentType string) error {
+    _, err := r.client.PutObject(ctx, r.cfg.Bucket, path, file, size, minio.PutObjectOptions{
+        ContentType: contentType,
+    })
+    if err != nil {
+        return fmt.Errorf("storageRepository.Upload: %w", err)  // 에러 래핑
+    }
+    return nil
 }
 ```
 
@@ -196,9 +208,35 @@ func (r *storageRepository) Upload(ctx context.Context, file *entity.UploadedFil
 3. 생성된 메서드를 Repository에서 호출
 4. `mapper.go`에서 Entity 변환
 
+## 에러 처리 패턴
+
+### 에러 래핑 규칙
+
+모든 에러는 `fmt.Errorf("repositoryName.FunctionName: %w", err)` 패턴으로 래핑합니다:
+
+```go
+// 일반 에러: 래핑하여 반환
+if err != nil {
+    return nil, fmt.Errorf("postRepository.FindByID: %w", err)
+}
+
+// sql.ErrNoRows: 도메인 에러로 변환 (래핑 없이)
+if errors.Is(err, sql.ErrNoRows) {
+    return nil, domain.ErrPostNotFound
+}
+```
+
+### 에러 체인 예시
+
+에러 래핑을 통해 전체 호출 체인을 추적할 수 있습니다:
+```
+postHandler.Create → postService.CreatePost → postRepository.Create: pq: duplicate key
+```
+
 ## 주의사항
 
-- Domain 계층 import만 허용 (`domain/entity`, `domain/repository`)
+- Domain 계층 import만 허용 (`domain/entity`, `domain/repository`, `domain`)
 - Application 계층 import 금지
-- 에러는 그대로 반환하거나, 필요시 도메인 에러로 래핑
-- sql.ErrNoRows는 nil 또는 도메인 에러로 변환
+- **모든 에러는 `fmt.Errorf`로 래핑** (함수명 포함)
+- `sql.ErrNoRows`는 도메인 에러로 변환 (`domain.ErrXxxNotFound`)
+- 에러 비교는 `errors.Is()` 사용

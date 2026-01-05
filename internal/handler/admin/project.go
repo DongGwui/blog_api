@@ -34,7 +34,7 @@ func NewProjectHandlerWithCleanArch(projectService domainService.ProjectService)
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
 	projects, err := h.projectService.ListProjects(c.Request.Context())
 	if err != nil {
-		handler.InternalError(c, "Failed to fetch projects")
+		handler.InternalErrorWithLog(c, "Failed to fetch projects", err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
-		handler.InternalError(c, "Failed to fetch project")
+		handler.InternalErrorWithLog(c, "Failed to fetch project", err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 			handler.Conflict(c, "Project slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to create project")
+		handler.InternalErrorWithLog(c, "Failed to create project", err)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 			handler.Conflict(c, "Project slug already exists")
 			return
 		}
-		handler.InternalError(c, "Failed to update project")
+		handler.InternalErrorWithLog(c, "Failed to update project", err)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 			handler.NotFound(c, "Project not found")
 			return
 		}
-		handler.InternalError(c, "Failed to delete project")
+		handler.InternalErrorWithLog(c, "Failed to delete project", err)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (h *ProjectHandler) ReorderProjects(c *gin.Context) {
 
 	orders := mapper.ToProjectOrderEntities(req.Orders)
 	if err := h.projectService.ReorderProjects(c.Request.Context(), orders); err != nil {
-		handler.InternalError(c, "Failed to reorder projects")
+		handler.InternalErrorWithLog(c, "Failed to reorder projects", err)
 		return
 	}
 
